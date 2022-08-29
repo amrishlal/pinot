@@ -49,6 +49,11 @@ public class AvgPair implements Comparable<AvgPair> {
     return _count;
   }
 
+  /** @return Average value. */
+  public double getAverage() {
+    return _sum / _count;
+  }
+
   @Nonnull
   public byte[] toBytes() {
     ByteBuffer byteBuffer = ByteBuffer.allocate(Double.BYTES + Long.BYTES);
@@ -90,5 +95,10 @@ public class AvgPair implements Comparable<AvgPair> {
         return 0;
       }
     }
+  }
+
+  @Override
+  public String toString() {
+    return "(" + _sum + ", " + _count + ")";
   }
 }

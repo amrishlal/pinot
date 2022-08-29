@@ -125,6 +125,12 @@ public interface RequestContext {
 
   int getNumRowsResultSet();
 
+  boolean isMaxWindowSegmentRowsReached();
+
+  boolean isMaxWindowServerRowsReached();
+
+  boolean isMaxWindowResultRowsReached();
+
   void setProcessingTimeMillis(long processingTimeMillis);
 
   void setTotalDocs(long totalDocs);
@@ -156,6 +162,12 @@ public interface RequestContext {
   void setNumRowsResultSet(int numRowsResultSet);
 
   void setReduceTimeMillis(long reduceTimeMillis);
+
+  void setMaxWindowSegmentRowsReached(boolean isMaxWindowSegmentRowsReached);
+
+  void setMaxWindowServerRowsReached(boolean isMaxWindowServerRowsReached);
+
+  void setMaxWindowResultRowsReached(boolean isMaxWindowResultRowsReached);
 
   enum FanoutType {
     OFFLINE, REALTIME, HYBRID

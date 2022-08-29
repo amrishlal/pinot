@@ -69,6 +69,11 @@ import org.apache.pinot.segment.local.customobject.LongLongPair;
 import org.apache.pinot.segment.local.customobject.MinMaxRangePair;
 import org.apache.pinot.segment.local.customobject.QuantileDigest;
 import org.apache.pinot.segment.local.customobject.StringLongPair;
+import org.apache.pinot.segment.local.customobject.window.AvgWindowAccumulator;
+import org.apache.pinot.segment.local.customobject.window.CountWindowAccumulator;
+import org.apache.pinot.segment.local.customobject.window.MaxWindowAccumulator;
+import org.apache.pinot.segment.local.customobject.window.MinWindowAccumulator;
+import org.apache.pinot.segment.local.customobject.window.SumWindowAccumulator;
 import org.apache.pinot.segment.local.utils.GeometrySerializer;
 import org.apache.pinot.spi.utils.BigDecimalUtils;
 import org.apache.pinot.spi.utils.ByteArray;
@@ -121,6 +126,11 @@ public class ObjectSerDeUtils {
     DoubleLongPair(30),
     StringLongPair(31),
     CovarianceTuple(32),
+    AvgWindowAccumulator(33),
+    SumWindowAccumulator(34),
+    MinWindowAccumulator(35),
+    MaxWindowAccumulator(36),
+    CountWindowAccumulator(37),
     Null(100);
     private final int _value;
 
@@ -206,6 +216,26 @@ public class ObjectSerDeUtils {
         return ObjectType.StringLongPair;
       } else if (value instanceof CovarianceTuple) {
         return ObjectType.CovarianceTuple;
+      } else if (value instanceof AvgWindowAccumulator) {
+        return ObjectType.AvgWindowAccumulator;
+      } else if (value instanceof SumWindowAccumulator) {
+        return ObjectType.SumWindowAccumulator;
+      } else if (value instanceof MinWindowAccumulator) {
+        return ObjectType.MinWindowAccumulator;
+      } else if (value instanceof MaxWindowAccumulator) {
+        return ObjectType.MaxWindowAccumulator;
+      } else if (value instanceof CountWindowAccumulator) {
+        return ObjectType.CountWindowAccumulator;
+      } else if (value instanceof AvgWindowAccumulator) {
+        return ObjectType.AvgWindowAccumulator;
+      } else if (value instanceof SumWindowAccumulator) {
+        return ObjectType.SumWindowAccumulator;
+      } else if (value instanceof MinWindowAccumulator) {
+        return ObjectType.MinWindowAccumulator;
+      } else if (value instanceof MaxWindowAccumulator) {
+        return ObjectType.MaxWindowAccumulator;
+      } else if (value instanceof CountWindowAccumulator) {
+        return ObjectType.CountWindowAccumulator;
       } else {
         throw new IllegalArgumentException("Unsupported type of value: " + value.getClass().getSimpleName());
       }
@@ -1158,6 +1188,101 @@ public class ObjectSerDeUtils {
     }
   };
 
+  public static final ObjectSerDe<AvgWindowAccumulator> AVG_WIN_ACCUMULATOR_SER_DE =
+      new ObjectSerDe<AvgWindowAccumulator>() {
+
+        @Override
+        public byte[] serialize(AvgWindowAccumulator avgWindowAccumulator) {
+          return avgWindowAccumulator.toBytes();
+        }
+
+        @Override
+        public AvgWindowAccumulator deserialize(byte[] bytes) {
+          return AvgWindowAccumulator.fromBytes(bytes);
+        }
+
+        @Override
+        public AvgWindowAccumulator deserialize(ByteBuffer byteBuffer) {
+          return AvgWindowAccumulator.fromByteBuffer(byteBuffer);
+        }
+      };
+
+  public static final ObjectSerDe<SumWindowAccumulator> SUM_WIN_ACCUMULATOR_SER_DE =
+      new ObjectSerDe<SumWindowAccumulator>() {
+
+        @Override
+        public byte[] serialize(SumWindowAccumulator sumWindowAccumulator) {
+          return sumWindowAccumulator.toBytes();
+        }
+
+        @Override
+        public SumWindowAccumulator deserialize(byte[] bytes) {
+          return SumWindowAccumulator.fromBytes(bytes);
+        }
+
+        @Override
+        public SumWindowAccumulator deserialize(ByteBuffer byteBuffer) {
+          return SumWindowAccumulator.fromByteBuffer(byteBuffer);
+        }
+      };
+
+  public static final ObjectSerDe<MinWindowAccumulator> MIN_WIN_ACCUMULATOR_SER_DE =
+      new ObjectSerDe<MinWindowAccumulator>() {
+
+        @Override
+        public byte[] serialize(MinWindowAccumulator minWindowAccumulator) {
+          return minWindowAccumulator.toBytes();
+        }
+
+        @Override
+        public MinWindowAccumulator deserialize(byte[] bytes) {
+          return MinWindowAccumulator.fromBytes(bytes);
+        }
+
+        @Override
+        public MinWindowAccumulator deserialize(ByteBuffer byteBuffer) {
+          return MinWindowAccumulator.fromByteBuffer(byteBuffer);
+        }
+      };
+
+  public static final ObjectSerDe<MaxWindowAccumulator> MAX_WIN_ACCUMULATOR_SER_DE =
+      new ObjectSerDe<MaxWindowAccumulator>() {
+
+        @Override
+        public byte[] serialize(MaxWindowAccumulator maxWindowAccumulator) {
+          return maxWindowAccumulator.toBytes();
+        }
+
+        @Override
+        public MaxWindowAccumulator deserialize(byte[] bytes) {
+          return MaxWindowAccumulator.fromBytes(bytes);
+        }
+
+        @Override
+        public MaxWindowAccumulator deserialize(ByteBuffer byteBuffer) {
+          return MaxWindowAccumulator.fromByteBuffer(byteBuffer);
+        }
+      };
+
+  public static final ObjectSerDe<CountWindowAccumulator> COUNT_WIN_ACCUMULATOR_SER_DE =
+      new ObjectSerDe<CountWindowAccumulator>() {
+
+        @Override
+        public byte[] serialize(CountWindowAccumulator countWindowAccumulator) {
+          return countWindowAccumulator.toBytes();
+        }
+
+        @Override
+        public CountWindowAccumulator deserialize(byte[] bytes) {
+          return CountWindowAccumulator.fromBytes(bytes);
+        }
+
+        @Override
+        public CountWindowAccumulator deserialize(ByteBuffer byteBuffer) {
+          return CountWindowAccumulator.fromByteBuffer(byteBuffer);
+        }
+      };
+
   // NOTE: DO NOT change the order, it has to be the same order as the ObjectType
   //@formatter:off
   private static final ObjectSerDe[] SER_DES = {
@@ -1193,7 +1318,12 @@ public class ObjectSerDeUtils {
       FLOAT_LONG_PAIR_SER_DE,
       DOUBLE_LONG_PAIR_SER_DE,
       STRING_LONG_PAIR_SER_DE,
-      COVARIANCE_TUPLE_OBJECT_SER_DE
+      COVARIANCE_TUPLE_OBJECT_SER_DE,
+      AVG_WIN_ACCUMULATOR_SER_DE,
+      SUM_WIN_ACCUMULATOR_SER_DE,
+      MIN_WIN_ACCUMULATOR_SER_DE,
+      MAX_WIN_ACCUMULATOR_SER_DE,
+      COUNT_WIN_ACCUMULATOR_SER_DE
   };
   //@formatter:on
 

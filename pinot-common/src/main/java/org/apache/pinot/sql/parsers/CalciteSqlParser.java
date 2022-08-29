@@ -19,6 +19,7 @@
 package org.apache.pinot.sql.parsers;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +45,7 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlSetOption;
+import org.apache.calcite.sql.SqlWindow;
 import org.apache.calcite.sql.fun.SqlBetweenOperator;
 import org.apache.calcite.sql.fun.SqlCase;
 import org.apache.calcite.sql.fun.SqlLikeOperator;
@@ -51,6 +53,7 @@ import org.apache.calcite.sql.parser.SqlAbstractParserImpl;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformanceEnum;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.pinot.common.function.TransformFunctionType;
 import org.apache.pinot.common.request.DataSource;
 import org.apache.pinot.common.request.Expression;
 import org.apache.pinot.common.request.ExpressionType;
@@ -194,6 +197,7 @@ public class CalciteSqlParser {
       throws SqlCompilationException {
     validateGroupByClause(pinotQuery);
     validateDistinctQuery(pinotQuery);
+    validateWindowQuery(pinotQuery);
   }
 
   private static void validateGroupByClause(PinotQuery pinotQuery)
@@ -260,6 +264,35 @@ public class CalciteSqlParser {
     }
   }
 
+  /** @throws IllegalStateException if query contains GROUP BY clause with window functions. */
+  private static void validateWindowQuery(PinotQuery pinotQuery) {
+    if (pinotQuery.getGroupByList() != null) {
+      List<Expression> selectList = pinotQuery.getSelectList();
+      for (Expression expression : selectList) {
+        Preconditions.checkState(!hasWindowFunction(expression),
+            "Window functions can not be used with GROUP BY clause.");
+      }
+    }
+  }
+
+  /** @return true if expression contains a window function. */
+  private static boolean hasWindowFunction(Expression expression) {
+    Function functionCall = expression.getFunctionCall();
+    if (functionCall != null) {
+      if (functionCall.getOperator().equalsIgnoreCase(TransformFunctionType.WINDOW.getName())) {
+        return true;
+      }
+
+      List<Expression> operands = functionCall.getOperands();
+      for (Expression operand : operands) {
+        if (hasWindowFunction(operand)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   private static List<Expression> getAliasLeftExpressionsFromDistinctExpression(Function function) {
     List<Expression> operands = function.getOperands();
     List<Expression> expressions = new ArrayList<>(operands.size());
@@ -296,7 +329,7 @@ public class CalciteSqlParser {
 
   public static boolean isAggregateExpression(Expression expression) {
     Function functionCall = expression.getFunctionCall();
-    if (functionCall != null) {
+    if (functionCall != null && !functionCall.getOperator().equalsIgnoreCase(TransformFunctionType.WINDOW.getName())) {
       String operator = functionCall.getOperator();
       if (AggregationFunctionType.isAggregationFunction(operator)) {
         return true;
@@ -738,6 +771,37 @@ public class CalciteSqlParser {
         }
         caseFuncExpr.getFunctionCall().addToOperands(elseExpression);
         return caseFuncExpr;
+      case OVER:
+        SqlBasicCall windowNode = (SqlBasicCall) node;
+
+        // Create WINDOW FUNCTION expression
+        Expression windowExpr = RequestUtils.getFunctionExpression(SqlKind.WINDOW.name());
+        List<SqlNode> windowOperands = windowNode.getOperandList();
+        Function windowFunc = windowExpr.getFunctionCall();
+        SqlWindow sqlWindow = (SqlWindow) windowOperands.get(1);
+
+        // Add the aggregate function as first operand.
+        windowFunc.addToOperands(toExpression(windowOperands.get(0)));
+
+        // Add PARTITION clause as the second operand.
+        SqlNodeList partitionNodeList = sqlWindow.getPartitionList();
+        Expression partitionExpr = RequestUtils.getFunctionExpression(TransformFunctionType.WINDOW_PARTITION.getName());
+        partitionExpr.getFunctionCall().setOperands(new ArrayList<>());
+        if (partitionNodeList.size() > 0) {
+          partitionExpr.getFunctionCall().setOperands(convertOrderByList(partitionNodeList));
+        }
+        windowFunc.addToOperands(partitionExpr);
+
+        // Add ORDER BY clause as third operand.
+        SqlNodeList orderByNodeList = sqlWindow.getOrderList();
+        Expression orderExpr = RequestUtils.getFunctionExpression(TransformFunctionType.WINDOW_ORDER.getName());
+        orderExpr.getFunctionCall().setOperands(new ArrayList<>());
+        if (orderByNodeList.size() > 0) {
+          orderExpr.getFunctionCall().setOperands(convertOrderByList(orderByNodeList));
+        }
+        windowFunc.addToOperands(orderExpr);
+
+        return windowExpr;
       default:
         if (node instanceof SqlDataTypeSpec) {
           // This is to handle expression like: CAST(col AS INT)

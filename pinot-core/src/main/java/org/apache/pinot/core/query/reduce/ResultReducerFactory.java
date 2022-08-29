@@ -46,6 +46,10 @@ public final class ResultReducerFactory {
       // Selection query
       return new SelectionDataTableReducer(queryContext);
     } else {
+      if (queryContext.hasWindowFunction()) {
+        return new SelectionWindowDataTableReducer(queryContext);
+      }
+
       // Aggregation query
       if (queryContext.getGroupByExpressions() == null) {
         // Aggregation only query

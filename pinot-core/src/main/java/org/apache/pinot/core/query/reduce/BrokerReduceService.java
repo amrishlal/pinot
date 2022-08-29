@@ -105,7 +105,7 @@ public class BrokerReduceService extends BaseReduceService {
     DataTableReducer dataTableReducer = ResultReducerFactory.getResultReducer(serverQueryContext);
     dataTableReducer.reduceAndSetResults(rawTableName, cachedDataSchema, dataTableMap, brokerResponseNative,
         new DataTableReducerContext(_reduceExecutorService, _maxReduceThreadsPerQuery, reduceTimeOutMs,
-            _groupByTrimThreshold), brokerMetrics);
+            _groupByTrimThreshold, _maxWindowResultRows), brokerMetrics);
     QueryContext queryContext;
     if (brokerRequest == serverBrokerRequest) {
       queryContext = serverQueryContext;

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.pinot.common.function.TransformFunctionType;
 import org.apache.pinot.common.request.DataSource;
 import org.apache.pinot.common.request.Expression;
 import org.apache.pinot.common.request.ExpressionType;
@@ -67,6 +68,7 @@ public class QueryContextConverterUtils {
     List<Expression> selectList = pinotQuery.getSelectList();
     List<String> aliasList = new ArrayList<>(selectList.size());
     selectExpressions = new ArrayList<>(selectList.size());
+    boolean hasWindowFunction = false;
     for (Expression thriftExpression : selectList) {
       // Handle alias
       Expression expressionWithoutAlias = thriftExpression;
@@ -96,6 +98,10 @@ public class QueryContextConverterUtils {
             aliasList.add(null);
             break;
         }
+
+        hasWindowFunction =
+            expressionWithoutAlias.getType() == ExpressionType.FUNCTION && expressionWithoutAlias.getFunctionCall()
+                .getOperator().equalsIgnoreCase(TransformFunctionType.WINDOW.getName());
       } else {
         // Add null as a placeholder for alias.
         aliasList.add(null);
@@ -156,8 +162,8 @@ public class QueryContextConverterUtils {
     }
 
     return new QueryContext.Builder().setTableName(tableName).setSubquery(subquery)
-        .setSelectExpressions(selectExpressions).setAliasList(aliasList).setFilter(filter)
-        .setGroupByExpressions(groupByExpressions).setOrderByExpressions(orderByExpressions)
+        .setSelectExpressions(selectExpressions).setHasWindowFunction(hasWindowFunction).setAliasList(aliasList)
+        .setFilter(filter).setGroupByExpressions(groupByExpressions).setOrderByExpressions(orderByExpressions)
         .setHavingFilter(havingFilter).setLimit(pinotQuery.getLimit()).setOffset(pinotQuery.getOffset())
         .setQueryOptions(pinotQuery.getQueryOptions()).setExpressionOverrideHints(expressionContextOverrideHints)
         .setExplain(pinotQuery.isExplain()).build();

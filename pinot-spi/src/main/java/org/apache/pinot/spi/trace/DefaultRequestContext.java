@@ -52,6 +52,9 @@ public class DefaultRequestContext implements RequestScope {
   private int _numServersQueried;
   private int _numServersResponded;
   private boolean _isNumGroupsLimitReached;
+  private boolean _isMaxWindowSegmentRowsReached;
+  private boolean _isMaxWindowServerRowsReached;
+  private boolean _isMaxWindowResultRowsReached;
   private int _numExceptions;
   private String _brokerId;
   private String _offlineServerTenant;
@@ -323,6 +326,21 @@ public class DefaultRequestContext implements RequestScope {
   }
 
   @Override
+  public boolean isMaxWindowSegmentRowsReached() {
+    return _isMaxWindowSegmentRowsReached;
+  }
+
+  @Override
+  public boolean isMaxWindowServerRowsReached() {
+    return _isMaxWindowServerRowsReached;
+  }
+
+  @Override
+  public boolean isMaxWindowResultRowsReached() {
+    return _isMaxWindowResultRowsReached;
+  }
+
+  @Override
   public void setProcessingTimeMillis(long processingTimeMillis) {
     _processingTimeMillis = processingTimeMillis;
   }
@@ -400,6 +418,21 @@ public class DefaultRequestContext implements RequestScope {
   @Override
   public void setReduceTimeMillis(long reduceTimeMillis) {
     _reduceTimeMillis = reduceTimeMillis;
+  }
+
+  @Override
+  public void setMaxWindowSegmentRowsReached(boolean isMaxWindowSegmentRowsReached) {
+    _isMaxWindowSegmentRowsReached = isMaxWindowSegmentRowsReached;
+  }
+
+  @Override
+  public void setMaxWindowServerRowsReached(boolean isMaxWindowServerRowsReached) {
+    _isMaxWindowServerRowsReached = isMaxWindowServerRowsReached;
+  }
+
+  @Override
+  public void setMaxWindowResultRowsReached(boolean isMaxWindowResultRowsReached) {
+    _isMaxWindowResultRowsReached = isMaxWindowResultRowsReached;
   }
 
   @Override

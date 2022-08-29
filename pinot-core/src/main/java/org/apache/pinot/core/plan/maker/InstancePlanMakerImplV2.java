@@ -88,6 +88,14 @@ public class InstancePlanMakerImplV2 implements PlanMaker {
   public static final String GROUPBY_TRIM_THRESHOLD_KEY = "groupby.trim.threshold";
   public static final int DEFAULT_GROUPBY_TRIM_THRESHOLD = 1_000_000;
 
+  // Set as pinot.server.query.executor.window.segment.rows.max
+  public static final String WINDOW_FUNCTION_SEGMENT_ROWS_MAX = "window.segment.rows.max";
+  public static final int DEFAULT_WINDOW_FUNCTION_SEGMENT_ROWS_MAX = 1_000_000;
+
+  // Set as pinot.server.query.executor.window.server.rows.max
+  public static final String WINDOW_FUNCTION_SERVER_ROWS_MAX = "window.server.rows.max";
+  public static final int DEFAULT_WINDOW_FUNCTION_SERVER_ROWS_MAX = 10_000_000;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(InstancePlanMakerImplV2.class);
 
   private final int _maxExecutionThreads;
@@ -99,6 +107,10 @@ public class InstancePlanMakerImplV2 implements PlanMaker {
   private final int _minServerGroupTrimSize;
   private final int _groupByTrimThreshold;
 
+  // Used for Window Function max rows
+  private final int _maxWindowSegmentRows;
+  private final int _maxWindowServerRows;
+
   @VisibleForTesting
   public InstancePlanMakerImplV2() {
     _maxExecutionThreads = DEFAULT_MAX_EXECUTION_THREADS;
@@ -107,6 +119,8 @@ public class InstancePlanMakerImplV2 implements PlanMaker {
     _minSegmentGroupTrimSize = DEFAULT_MIN_SEGMENT_GROUP_TRIM_SIZE;
     _minServerGroupTrimSize = DEFAULT_MIN_SERVER_GROUP_TRIM_SIZE;
     _groupByTrimThreshold = DEFAULT_GROUPBY_TRIM_THRESHOLD;
+    _maxWindowSegmentRows = DEFAULT_WINDOW_FUNCTION_SEGMENT_ROWS_MAX;
+    _maxWindowServerRows = DEFAULT_WINDOW_FUNCTION_SERVER_ROWS_MAX;
   }
 
   @VisibleForTesting
@@ -118,6 +132,8 @@ public class InstancePlanMakerImplV2 implements PlanMaker {
     _minSegmentGroupTrimSize = minSegmentGroupTrimSize;
     _minServerGroupTrimSize = minServerGroupTrimSize;
     _groupByTrimThreshold = groupByTrimThreshold;
+    _maxWindowSegmentRows = InstancePlanMakerImplV2.DEFAULT_WINDOW_FUNCTION_SEGMENT_ROWS_MAX;
+    _maxWindowServerRows = InstancePlanMakerImplV2.DEFAULT_WINDOW_FUNCTION_SERVER_ROWS_MAX;
   }
 
   /**
@@ -143,10 +159,20 @@ public class InstancePlanMakerImplV2 implements PlanMaker {
     _groupByTrimThreshold = config.getProperty(GROUPBY_TRIM_THRESHOLD_KEY, DEFAULT_GROUPBY_TRIM_THRESHOLD);
     Preconditions.checkState(_groupByTrimThreshold > 0,
         "Invalid configurable: groupByTrimThreshold: %d must be positive", _groupByTrimThreshold);
+
+    _maxWindowSegmentRows =
+        config.getProperty(WINDOW_FUNCTION_SEGMENT_ROWS_MAX, DEFAULT_WINDOW_FUNCTION_SEGMENT_ROWS_MAX);
+    Preconditions.checkState(_maxWindowSegmentRows > 0,
+        "Invalid configurable: maxWindowSegmentRows: %d must be positive.", _maxWindowSegmentRows);
+    _maxWindowServerRows = config.getProperty(WINDOW_FUNCTION_SERVER_ROWS_MAX, DEFAULT_WINDOW_FUNCTION_SERVER_ROWS_MAX);
+    Preconditions.checkState(_maxWindowServerRows > 0,
+        "Invalid configurable: maxWindowServerRows: %d must be positive.", _maxWindowServerRows);
+
     LOGGER.info("Initializing plan maker with maxInitialResultHolderCapacity: {}, numGroupsLimit: {}, "
-            + "minSegmentGroupTrimSize: {}, minServerGroupTrimSize: {}", _maxInitialResultHolderCapacity,
-        _numGroupsLimit,
-        _minSegmentGroupTrimSize, _minServerGroupTrimSize);
+            + "minSegmentGroupTrimSize: {}, minServerGroupTrimSize: {}, maxWindowSegmentRows {}, "
+            + "maxWindowServerRows {}",
+        _maxInitialResultHolderCapacity, _numGroupsLimit, _minSegmentGroupTrimSize, _minServerGroupTrimSize,
+        _maxWindowSegmentRows, _maxWindowServerRows);
   }
 
   @Override
@@ -236,6 +262,9 @@ public class InstancePlanMakerImplV2 implements PlanMaker {
 
       // Set groupTrimThreshold
       queryContext.setGroupTrimThreshold(_groupByTrimThreshold);
+
+      queryContext.setMaxWindowSegmentRows(_maxWindowSegmentRows);
+      queryContext.setMaxWindowServerRows(_maxWindowServerRows);
     }
   }
 

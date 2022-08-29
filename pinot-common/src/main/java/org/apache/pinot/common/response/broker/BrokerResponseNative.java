@@ -44,8 +44,9 @@ import org.apache.pinot.spi.utils.JsonUtils;
     "resultTable", "exceptions", "numServersQueried", "numServersResponded", "numSegmentsQueried",
     "numSegmentsProcessed", "numSegmentsMatched", "numConsumingSegmentsQueried", "numConsumingSegmentsProcessed",
     "numConsumingSegmentsMatched", "numDocsScanned", "numEntriesScannedInFilter", "numEntriesScannedPostFilter",
-    "numGroupsLimitReached", "totalDocs", "timeUsedMs", "offlineThreadCpuTimeNs", "realtimeThreadCpuTimeNs",
-    "offlineSystemActivitiesCpuTimeNs", "realtimeSystemActivitiesCpuTimeNs", "offlineResponseSerializationCpuTimeNs",
+    "numGroupsLimitReached", "maxWindowSegmentRowsReached", "maxWindowServerRowsReached", "maxWindowResultRowsReached",
+    "totalDocs", "timeUsedMs", "offlineThreadCpuTimeNs", "realtimeThreadCpuTimeNs", "offlineSystemActivitiesCpuTimeNs",
+    "realtimeSystemActivitiesCpuTimeNs", "offlineResponseSerializationCpuTimeNs",
     "realtimeResponseSerializationCpuTimeNs", "offlineTotalCpuTimeNs", "realtimeTotalCpuTimeNs", "segmentStatistics",
     "traceInfo"
 })
@@ -95,6 +96,9 @@ public class BrokerResponseNative implements BrokerResponse {
   private Map<String, String> _traceInfo = new HashMap<>();
   private List<QueryProcessingException> _processingExceptions = new ArrayList<>();
   private List<String> _segmentStatistics = new ArrayList<>();
+  private boolean _maxWindowSegmentRowsReached = false;
+  private boolean _maxWindowServerRowsReached = false;
+  private boolean _maxWindowResultRowsReached = false;
 
   public BrokerResponseNative() {
   }
@@ -486,6 +490,39 @@ public class BrokerResponseNative implements BrokerResponse {
   @JsonProperty("numGroupsLimitReached")
   public void setNumGroupsLimitReached(boolean numGroupsLimitReached) {
     _numGroupsLimitReached = numGroupsLimitReached;
+  }
+
+  @JsonProperty("maxWindowSegmentRowsReached")
+  @Override
+  public boolean isMaxWindowSegmentRowsReached() {
+    return _maxWindowSegmentRowsReached;
+  }
+
+  @JsonProperty("maxWindowSegmentRowsReached")
+  public void setMaxWindowSegmentRowsReached(boolean maxWindowSegmentRowsReached) {
+    _maxWindowSegmentRowsReached = maxWindowSegmentRowsReached;
+  }
+
+  @JsonProperty("maxWindowServerRowsReached")
+  @Override
+  public boolean isMaxWindowServerRowsReached() {
+    return _maxWindowServerRowsReached;
+  }
+
+  @JsonProperty("maxWindowServerRowsReached")
+  public void setMaxWindowServerRowsReached(boolean maxWindowServerRowsReached) {
+    _maxWindowServerRowsReached = maxWindowServerRowsReached;
+  }
+
+  @JsonProperty("maxWindowResultRowsReached")
+  @Override
+  public boolean isMaxWindowResultRowsReached() {
+    return _maxWindowResultRowsReached;
+  }
+
+  @JsonProperty("maxWindowServerRowsReached")
+  public void setMaxWindowResultRowsReached(boolean maxWindowResultRowsReached) {
+    _maxWindowResultRowsReached = maxWindowResultRowsReached;
   }
 
   @JsonProperty("timeUsedMs")

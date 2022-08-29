@@ -26,7 +26,7 @@ import org.apache.pinot.core.operator.blocks.TransformBlock;
  * Interface for Aggregation executor, that executes all aggregation functions (without group-bys).
  * <p>Aggregations are performed within a segment, i.e. does not merge aggregation results across different segments.
  */
-public interface AggregationExecutor {
+public interface AggregationExecutor<V> {
 
   /**
    * Performs aggregation on the given transform block.
@@ -41,5 +41,5 @@ public interface AggregationExecutor {
    *
    * @return Result of aggregation
    */
-  List<Object> getResult();
+  List<V> getResult();
 }

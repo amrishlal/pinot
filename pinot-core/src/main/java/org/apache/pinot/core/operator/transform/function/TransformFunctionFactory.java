@@ -68,6 +68,7 @@ import org.apache.pinot.core.operator.transform.function.TrigonometricTransformF
 import org.apache.pinot.core.operator.transform.function.TrigonometricTransformFunctions.TanTransformFunction;
 import org.apache.pinot.core.operator.transform.function.TrigonometricTransformFunctions.TanhTransformFunction;
 import org.apache.pinot.core.query.request.context.QueryContext;
+import org.apache.pinot.core.query.selection.SelectionOperatorUtils;
 import org.apache.pinot.segment.spi.datasource.DataSource;
 import org.apache.pinot.spi.exception.BadQueryRequestException;
 
@@ -145,6 +146,9 @@ public class TransformFunctionFactory {
 
     typeToImplementation.put(TransformFunctionType.GROOVY, GroovyTransformFunction.class);
     typeToImplementation.put(TransformFunctionType.CASE, CaseTransformFunction.class);
+    typeToImplementation.put(TransformFunctionType.WINDOW, WindowTransformFunction.class);
+    typeToImplementation.put(TransformFunctionType.WINDOW_ORDER, WindowTransformFunction.class);
+    typeToImplementation.put(TransformFunctionType.WINDOW_PARTITION, WindowTransformFunction.class);
 
     typeToImplementation.put(TransformFunctionType.EQUALS, EqualsTransformFunction.class);
     typeToImplementation.put(TransformFunctionType.NOT_EQUALS, NotEqualsTransformFunction.class);
@@ -301,7 +305,25 @@ public class TransformFunctionFactory {
 
         List<TransformFunction> transformFunctionArguments = new ArrayList<>(numArguments);
         for (ExpressionContext argument : arguments) {
-          transformFunctionArguments.add(TransformFunctionFactory.get(queryContext, argument, dataSourceMap));
+          if (functionName.equalsIgnoreCase(TransformFunctionType.WINDOW.getName())
+              && argument.getType() == ExpressionContext.Type.FUNCTION) {
+            // Add all expressions used in Window Function specification. For example, in the window function expression
+            // avg(score) over(PARTITION BY lname ORDER BY fname), 'score', 'lname', 'fname' will be added to
+            // transformFunctionArguments.
+            if (argument.getFunction().getType() == FunctionContext.Type.AGGREGATION) {
+              List<ExpressionContext> subarguments = argument.getFunction().getArguments();
+              for (ExpressionContext subargument : subarguments) {
+                if (!subargument.equals(SelectionOperatorUtils.IDENTIFIER_STAR)) {
+                  // Add TransformFunction only if the expression is not a "*" identifier (which will happen when
+                  // count(*) is used as aggregation with window functions).
+                  transformFunctionArguments.add(
+                      TransformFunctionFactory.get(queryContext, subargument, dataSourceMap));
+                }
+              }
+            }
+          } else {
+            transformFunctionArguments.add(TransformFunctionFactory.get(queryContext, argument, dataSourceMap));
+          }
         }
         try {
           transformFunction.init(transformFunctionArguments, dataSourceMap);

@@ -64,13 +64,15 @@ public abstract class BaseReduceService {
   protected final ExecutorService _reduceExecutorService;
   protected final int _maxReduceThreadsPerQuery;
   protected final int _groupByTrimThreshold;
+  protected final int _maxWindowResultRows;
 
   public BaseReduceService(PinotConfiguration config) {
     _maxReduceThreadsPerQuery = config.getProperty(CommonConstants.Broker.CONFIG_OF_MAX_REDUCE_THREADS_PER_QUERY,
         CommonConstants.Broker.DEFAULT_MAX_REDUCE_THREADS_PER_QUERY);
     _groupByTrimThreshold = config.getProperty(CommonConstants.Broker.CONFIG_OF_BROKER_GROUPBY_TRIM_THRESHOLD,
         CommonConstants.Broker.DEFAULT_BROKER_GROUPBY_TRIM_THRESHOLD);
-
+    _maxWindowResultRows = config.getProperty(CommonConstants.Broker.WINDOW_FUNCTION_RESULT_ROWS_MAX,
+        CommonConstants.Broker.DEFAULT_WINDOW_FUNCTION_RESULT_ROWS_MAX);
     int numThreadsInExecutorService = Runtime.getRuntime().availableProcessors();
     LOGGER.info("Initializing BrokerReduceService with {} threads, and {} max reduce threads.",
         numThreadsInExecutorService, _maxReduceThreadsPerQuery);
@@ -152,6 +154,8 @@ public abstract class BaseReduceService {
     private long _explainPlanNumEmptyFilterSegments = 0L;
     private long _explainPlanNumMatchAllFilterSegments = 0L;
     private boolean _numGroupsLimitReached = false;
+    private boolean _maxWindowSegmentRowsReached = false;
+    private boolean _maxWindowServerRowsReached = false;
 
     protected ExecutionStatsAggregator(boolean enableTrace) {
       _enableTrace = enableTrace;
@@ -272,6 +276,10 @@ public abstract class BaseReduceService {
         _numTotalDocs += Long.parseLong(numTotalDocsString);
       }
       _numGroupsLimitReached |= Boolean.parseBoolean(metadata.get(MetadataKey.NUM_GROUPS_LIMIT_REACHED.getName()));
+      _maxWindowSegmentRowsReached |=
+          Boolean.parseBoolean(metadata.get(MetadataKey.WINDOW_FUNCTION_SEGMENT_ROW_LIMIT_REACHED.getName()));
+      _maxWindowServerRowsReached |=
+          Boolean.parseBoolean(metadata.get(MetadataKey.WINDOW_FUNCTION_SERVER_ROW_LIMIT_REACHED.getName()));
     }
 
     protected void setStats(String rawTableName, BrokerResponseNative brokerResponseNative,
@@ -308,6 +316,9 @@ public abstract class BaseReduceService {
       brokerResponseNative.setNumSegmentsPrunedByValue(_numSegmentsPrunedByValue);
       brokerResponseNative.setExplainPlanNumEmptyFilterSegments(_explainPlanNumEmptyFilterSegments);
       brokerResponseNative.setExplainPlanNumMatchAllFilterSegments(_explainPlanNumMatchAllFilterSegments);
+      brokerResponseNative.setMaxWindowSegmentRowsReached(_maxWindowSegmentRowsReached);
+      brokerResponseNative.setMaxWindowServerRowsReached(_maxWindowServerRowsReached);
+
       if (_numConsumingSegmentsQueried > 0) {
         brokerResponseNative.setNumConsumingSegmentsQueried(_numConsumingSegmentsQueried);
       }

@@ -73,6 +73,7 @@ public class QueryContext {
   private final String _tableName;
   private final QueryContext _subquery;
   private final List<ExpressionContext> _selectExpressions;
+  private final boolean _hasWindowFunction;
   private final List<String> _aliasList;
   private final FilterContext _filter;
   private final List<ExpressionContext> _groupByExpressions;
@@ -118,18 +119,24 @@ public class QueryContext {
   private int _minServerGroupTrimSize = InstancePlanMakerImplV2.DEFAULT_MIN_SERVER_GROUP_TRIM_SIZE;
   // Trim threshold to use for server combine for SQL GROUP BY
   private int _groupTrimThreshold = InstancePlanMakerImplV2.DEFAULT_GROUPBY_TRIM_THRESHOLD;
+  // Maximum numer for rows generated at segment level from a window function query.
+  private int _maxWindowSegmentRows = InstancePlanMakerImplV2.DEFAULT_WINDOW_FUNCTION_SEGMENT_ROWS_MAX;
+  // Maximum number of rows generated at server level from a window function query.
+  private int _maxWindowServerRows = InstancePlanMakerImplV2.DEFAULT_WINDOW_FUNCTION_SERVER_ROWS_MAX;
+
   // Whether null handling is enabled
   private boolean _nullHandlingEnabled;
 
   private QueryContext(@Nullable String tableName, @Nullable QueryContext subquery,
-      List<ExpressionContext> selectExpressions, List<String> aliasList, @Nullable FilterContext filter,
-      @Nullable List<ExpressionContext> groupByExpressions, @Nullable FilterContext havingFilter,
-      @Nullable List<OrderByExpressionContext> orderByExpressions, int limit, int offset,
-      Map<String, String> queryOptions, @Nullable Map<ExpressionContext, ExpressionContext> expressionOverrideHints,
-      boolean explain) {
+      List<ExpressionContext> selectExpressions, boolean hasWindowFunction, List<String> aliasList,
+      @Nullable FilterContext filter, @Nullable List<ExpressionContext> groupByExpressions,
+      @Nullable FilterContext havingFilter, @Nullable List<OrderByExpressionContext> orderByExpressions, int limit,
+      int offset, Map<String, String> queryOptions,
+      @Nullable Map<ExpressionContext, ExpressionContext> expressionOverrideHints, boolean explain) {
     _tableName = tableName;
     _subquery = subquery;
     _selectExpressions = selectExpressions;
+    _hasWindowFunction = hasWindowFunction;
     _aliasList = Collections.unmodifiableList(aliasList);
     _filter = filter;
     _groupByExpressions = groupByExpressions;
@@ -163,6 +170,11 @@ public class QueryContext {
    */
   public List<ExpressionContext> getSelectExpressions() {
     return _selectExpressions;
+  }
+
+  /** @return true if select list contains window functions; otherwise, false */
+  public boolean hasWindowFunction() {
+    return _hasWindowFunction;
   }
 
   /**
@@ -375,6 +387,22 @@ public class QueryContext {
     _groupTrimThreshold = groupTrimThreshold;
   }
 
+  public int getMaxWindowSegmentRows() {
+    return _maxWindowSegmentRows;
+  }
+
+  public void setMaxWindowSegmentRows(int maxWindowSegmentRows) {
+    _maxWindowSegmentRows = maxWindowSegmentRows;
+  }
+
+  public int getMaxWindowServerRows() {
+    return _maxWindowServerRows;
+  }
+
+  public void setMaxWindowServerRows(int maxWindowServerRows) {
+    _maxWindowServerRows = maxWindowServerRows;
+  }
+
   public boolean isNullHandlingEnabled() {
     return _nullHandlingEnabled;
   }
@@ -403,16 +431,19 @@ public class QueryContext {
   @Override
   public String toString() {
     return "QueryContext{" + "_tableName='" + _tableName + '\'' + ", _subquery=" + _subquery + ", _selectExpressions="
-        + _selectExpressions + ", _aliasList=" + _aliasList + ", _filter=" + _filter + ", _groupByExpressions="
-        + _groupByExpressions + ", _havingFilter=" + _havingFilter + ", _orderByExpressions=" + _orderByExpressions
-        + ", _limit=" + _limit + ", _offset=" + _offset + ", _queryOptions=" + _queryOptions
-        + ", _expressionOverrideHints=" + _expressionOverrideHints + ", _explain=" + _explain + '}';
+        + _selectExpressions + ", _hasWindowFunction=" + _hasWindowFunction + ", _aliasList=" + _aliasList
+        + ", _filter=" + _filter + ", _groupByExpressions=" + _groupByExpressions + ", _havingFilter=" + _havingFilter
+        + ", _orderByExpressions=" + _orderByExpressions + ", _limit=" + _limit + ", _offset=" + _offset
+        + ", _queryOptions=" + _queryOptions + ", _expressionOverrideHints=" + _expressionOverrideHints + ", _explain="
+        + _explain + '}';
   }
+
 
   public static class Builder {
     private String _tableName;
     private QueryContext _subquery;
     private List<ExpressionContext> _selectExpressions;
+    private boolean _hasWindowFunction;
     private List<String> _aliasList;
     private FilterContext _filter;
     private List<ExpressionContext> _groupByExpressions;
@@ -442,6 +473,11 @@ public class QueryContext {
 
     public Builder setAliasList(List<String> aliasList) {
       _aliasList = aliasList;
+      return this;
+    }
+
+    public Builder setHasWindowFunction(boolean hasWindowFunction) {
+      _hasWindowFunction = hasWindowFunction;
       return this;
     }
 
@@ -497,8 +533,9 @@ public class QueryContext {
         _queryOptions = Collections.emptyMap();
       }
       QueryContext queryContext =
-          new QueryContext(_tableName, _subquery, _selectExpressions, _aliasList, _filter, _groupByExpressions,
-              _havingFilter, _orderByExpressions, _limit, _offset, _queryOptions, _expressionOverrideHints, _explain);
+          new QueryContext(_tableName, _subquery, _selectExpressions, _hasWindowFunction, _aliasList, _filter,
+              _groupByExpressions, _havingFilter, _orderByExpressions, _limit, _offset, _queryOptions,
+              _expressionOverrideHints, _explain);
       queryContext.setNullHandlingEnabled(QueryOptionsUtils.isNullHandlingEnabled(_queryOptions));
 
       // Pre-calculate the aggregation functions and columns for the query

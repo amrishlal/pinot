@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 import org.apache.pinot.common.exception.QueryException;
 import org.apache.pinot.common.response.ProcessingException;
@@ -47,6 +48,7 @@ import org.apache.pinot.core.query.aggregation.function.DistinctAggregationFunct
 import org.apache.pinot.core.query.aggregation.groupby.AggregationGroupByResult;
 import org.apache.pinot.core.query.distinct.DistinctTable;
 import org.apache.pinot.core.query.selection.SelectionOperatorUtils;
+import org.apache.pinot.core.query.selection.WindowFunctionContext;
 import org.apache.pinot.spi.utils.ByteArray;
 import org.apache.pinot.spi.utils.NullValueUtils;
 import org.roaringbitmap.RoaringBitmap;
@@ -62,6 +64,7 @@ public class IntermediateResultsBlock implements Block {
   private DataSchema _dataSchema;
   private boolean _nullHandlingEnabled;
   private Collection<Object[]> _selectionResult;
+  private WindowFunctionContext _windowFunctionContext;
   private AggregationFunction[] _aggregationFunctions;
   private List<Object> _aggregationResult;
   private AggregationGroupByResult _aggregationGroupByResult;
@@ -160,6 +163,13 @@ public class IntermediateResultsBlock implements Block {
     _nullHandlingEnabled = false;
   }
 
+  /** Constructor for window function results */
+  public IntermediateResultsBlock(Collection<Object[]> selectionResult, WindowFunctionContext windowFunctionContext) {
+    _selectionResult = selectionResult;
+    _windowFunctionContext = windowFunctionContext;
+    _dataSchema = windowFunctionContext.getDataSchema();
+  }
+
   /**
    * Constructor for exception block.
    */
@@ -230,6 +240,11 @@ public class IntermediateResultsBlock implements Block {
   @Nullable
   public List<ProcessingException> getProcessingExceptions() {
     return _processingExceptions;
+  }
+
+  @Nullable
+  public WindowFunctionContext getWindowFunctionContext() {
+    return _windowFunctionContext;
   }
 
   public void setProcessingExceptions(List<ProcessingException> processingExceptions) {
@@ -576,27 +591,34 @@ public class IntermediateResultsBlock implements Block {
   }
 
   private DataTable attachMetadataToDataTable(DataTable dataTable) {
-    dataTable.getMetadata().put(MetadataKey.NUM_DOCS_SCANNED.getName(), String.valueOf(_numDocsScanned));
-    dataTable.getMetadata()
-        .put(MetadataKey.NUM_ENTRIES_SCANNED_IN_FILTER.getName(), String.valueOf(_numEntriesScannedInFilter));
-    dataTable.getMetadata()
-        .put(MetadataKey.NUM_ENTRIES_SCANNED_POST_FILTER.getName(), String.valueOf(_numEntriesScannedPostFilter));
-    dataTable.getMetadata().put(MetadataKey.NUM_SEGMENTS_PROCESSED.getName(), String.valueOf(_numSegmentsProcessed));
-    dataTable.getMetadata().put(MetadataKey.NUM_SEGMENTS_MATCHED.getName(), String.valueOf(_numSegmentsMatched));
-    dataTable.getMetadata()
-        .put(MetadataKey.NUM_CONSUMING_SEGMENTS_PROCESSED.getName(), String.valueOf(_numConsumingSegmentsProcessed));
-    dataTable.getMetadata()
-        .put(MetadataKey.NUM_CONSUMING_SEGMENTS_MATCHED.getName(), String.valueOf(_numConsumingSegmentsMatched));
-    dataTable.getMetadata().put(MetadataKey.NUM_RESIZES.getName(), String.valueOf(_numResizes));
-    dataTable.getMetadata().put(MetadataKey.RESIZE_TIME_MS.getName(), String.valueOf(_resizeTimeMs));
+    Map<String, String> metadata = dataTable.getMetadata();
+    metadata.put(MetadataKey.NUM_DOCS_SCANNED.getName(), String.valueOf(_numDocsScanned));
+    metadata.put(MetadataKey.NUM_ENTRIES_SCANNED_IN_FILTER.getName(), String.valueOf(_numEntriesScannedInFilter));
+    metadata.put(MetadataKey.NUM_ENTRIES_SCANNED_POST_FILTER.getName(), String.valueOf(_numEntriesScannedPostFilter));
+    metadata.put(MetadataKey.NUM_SEGMENTS_PROCESSED.getName(), String.valueOf(_numSegmentsProcessed));
+    metadata.put(MetadataKey.NUM_SEGMENTS_MATCHED.getName(), String.valueOf(_numSegmentsMatched));
+    metadata.put(MetadataKey.NUM_CONSUMING_SEGMENTS_PROCESSED.getName(),
+        String.valueOf(_numConsumingSegmentsProcessed));
+    metadata.put(MetadataKey.NUM_CONSUMING_SEGMENTS_MATCHED.getName(), String.valueOf(_numConsumingSegmentsMatched));
+    metadata.put(MetadataKey.NUM_RESIZES.getName(), String.valueOf(_numResizes));
+    metadata.put(MetadataKey.RESIZE_TIME_MS.getName(), String.valueOf(_resizeTimeMs));
 
-    dataTable.getMetadata().put(MetadataKey.TOTAL_DOCS.getName(), String.valueOf(_numTotalDocs));
+    metadata.put(MetadataKey.TOTAL_DOCS.getName(), String.valueOf(_numTotalDocs));
     if (_numGroupsLimitReached) {
-      dataTable.getMetadata().put(MetadataKey.NUM_GROUPS_LIMIT_REACHED.getName(), "true");
+      metadata.put(MetadataKey.NUM_GROUPS_LIMIT_REACHED.getName(), "true");
     }
     if (_processingExceptions != null && !_processingExceptions.isEmpty()) {
       for (ProcessingException exception : _processingExceptions) {
         dataTable.addException(exception);
+      }
+    }
+
+    if (_windowFunctionContext != null) {
+      if (_windowFunctionContext.isMaxWindowSegmentRowsReached()) {
+        metadata.put(MetadataKey.WINDOW_FUNCTION_SEGMENT_ROW_LIMIT_REACHED.getName(), "true");
+      }
+      if (_windowFunctionContext.isMaxWindowServerRowsReached()) {
+        metadata.put(MetadataKey.WINDOW_FUNCTION_SERVER_ROW_LIMIT_REACHED.getName(), "true");
       }
     }
     return dataTable;

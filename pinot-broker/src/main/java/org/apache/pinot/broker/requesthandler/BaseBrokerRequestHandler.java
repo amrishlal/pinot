@@ -790,7 +790,8 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
               + "{}/{}/{}/{}/{}/{}/{},consumingFreshnessTimeMs={},"
               + "servers={}/{},groupLimitReached={},brokerReduceTimeMs={},exceptions={},serverStats={},"
               + "offlineThreadCpuTimeNs(total/thread/sysActivity/resSer):{}/{}/{}/{},"
-              + "realtimeThreadCpuTimeNs(total/thread/sysActivity/resSer):{}/{}/{}/{},clientIp={},query={}", requestId,
+              + "realtimeThreadCpuTimeNs(total/thread/sysActivity/resSer):{}/{}/{}/{},clientIp={},"
+              + "maxWindowRowsReached:{}/{}/{},query={}", requestId,
           tableName, totalTimeMs, brokerResponse.getNumDocsScanned(), brokerResponse.getTotalDocs(),
           brokerResponse.getNumEntriesScannedInFilter(), brokerResponse.getNumEntriesScannedPostFilter(),
           brokerResponse.getNumSegmentsQueried(), brokerResponse.getNumSegmentsProcessed(),
@@ -804,6 +805,8 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
           brokerResponse.getOfflineResponseSerializationCpuTimeNs(), brokerResponse.getRealtimeTotalCpuTimeNs(),
           brokerResponse.getRealtimeThreadCpuTimeNs(), brokerResponse.getRealtimeSystemActivitiesCpuTimeNs(),
           brokerResponse.getRealtimeResponseSerializationCpuTimeNs(), clientIp,
+          brokerResponse.isMaxWindowSegmentRowsReached(), brokerResponse.isMaxWindowServerRowsReached(),
+          brokerResponse.isMaxWindowResultRowsReached(),
           StringUtils.substring(query, 0, _queryLogLength));
 
       // Limit the dropping log message at most once per second.
@@ -1544,17 +1547,10 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
    *
    * TODO: come up with other criteria for forcing a log and come up with better numbers
    */
-  private boolean forceLog(BrokerResponse brokerResponse, long totalTimeMs) {
-    if (brokerResponse.isNumGroupsLimitReached()) {
-      return true;
-    }
-
-    if (brokerResponse.getExceptionsSize() > 0) {
-      return true;
-    }
-
-    // If response time is more than 1 sec, force the log
-    return totalTimeMs > 1000L;
+  private static boolean forceLog(BrokerResponse brokerResponse, long totalTimeMs) {
+    return brokerResponse.isNumGroupsLimitReached() || brokerResponse.getExceptionsSize() > 0 || totalTimeMs > 1000L
+        || brokerResponse.isMaxWindowSegmentRowsReached() || brokerResponse.isMaxWindowServerRowsReached()
+        || brokerResponse.isMaxWindowServerRowsReached();
   }
 
   /**
@@ -1684,6 +1680,9 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
     statistics.setOfflineTotalCpuTimeNs(response.getOfflineTotalCpuTimeNs());
     statistics.setRealtimeTotalCpuTimeNs(response.getRealtimeTotalCpuTimeNs());
     statistics.setNumRowsResultSet(response.getNumRowsResultSet());
+    statistics.setMaxWindowSegmentRowsReached(response.isMaxWindowSegmentRowsReached());
+    statistics.setMaxWindowServerRowsReached(response.isMaxWindowServerRowsReached());
+    statistics.setMaxWindowResultRowsReached(response.isMaxWindowResultRowsReached());
   }
 
   private String getGlobalQueryId(long requestId) {

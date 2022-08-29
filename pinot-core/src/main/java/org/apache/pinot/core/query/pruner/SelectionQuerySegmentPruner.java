@@ -51,10 +51,12 @@ public class SelectionQuerySegmentPruner implements SegmentPruner {
 
   @Override
   public boolean isApplicableTo(QueryContext query) {
-    // Only prune selection queries
-    // If LIMIT is not 0, only prune segments for selection queries without filter
-    return QueryContextUtils.isSelectionQuery(query)
-        && (query.getFilter() == null || query.getLimit() == 0);
+    // 1. Only prune selection queries.
+    // 2. If LIMIT is not 0, only prune segments for selection queries without filter
+    // 3. Don't prune if query has window function since window function aggregate values must be the same
+    //    with or without LIMIT clause.
+    return QueryContextUtils.isSelectionQuery(query) && (query.getFilter() == null || query.getLimit() == 0)
+        && !query.hasWindowFunction();
   }
 
   @Override

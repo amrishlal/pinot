@@ -35,6 +35,7 @@ import org.apache.pinot.core.operator.combine.CombineOperatorUtils;
 import org.apache.pinot.core.operator.combine.DistinctCombineOperator;
 import org.apache.pinot.core.operator.combine.GroupByOrderByCombineOperator;
 import org.apache.pinot.core.operator.combine.SelectionOnlyCombineOperator;
+import org.apache.pinot.core.operator.combine.SelectionOnlyWindowCombineOperator;
 import org.apache.pinot.core.operator.combine.SelectionOrderByCombineOperator;
 import org.apache.pinot.core.operator.streaming.StreamingSelectionOnlyCombineOperator;
 import org.apache.pinot.core.query.request.context.QueryContext;
@@ -185,6 +186,10 @@ public class CombinePlanNode implements PlanNode {
         return new GroupByOrderByCombineOperator(operators, _queryContext, _executorService);
       }
     } else if (QueryContextUtils.isSelectionQuery(_queryContext)) {
+      if (_queryContext.hasWindowFunction()) {
+        return new SelectionOnlyWindowCombineOperator(operators, _queryContext, _executorService);
+      }
+
       if (_queryContext.getLimit() == 0 || _queryContext.getOrderByExpressions() == null) {
         // Selection only
         return new SelectionOnlyCombineOperator(operators, _queryContext, _executorService);

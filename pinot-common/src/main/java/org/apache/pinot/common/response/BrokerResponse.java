@@ -133,6 +133,15 @@ public interface BrokerResponse {
    */
   boolean isNumGroupsLimitReached();
 
+  /** @return true if segment-level results for a window function query contains max number of allowed rows. */
+  boolean isMaxWindowSegmentRowsReached();
+
+  /** @return true if server-level results for a window function query contains max number of allowed rows. */
+  boolean isMaxWindowServerRowsReached();
+
+  /** @return true if broker-level results for a window function query contains max number of allowed rows. */
+  boolean isMaxWindowResultRowsReached();
+
   /**
    * Get number of exceptions recorded in the response.
    */

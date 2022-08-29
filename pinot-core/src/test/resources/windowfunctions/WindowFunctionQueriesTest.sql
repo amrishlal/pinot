@@ -1,0 +1,22 @@
+-- Script used for creating mysql test table for cross checking results of queries in WindowFunctionQueriesTest.java.
+create table test(fname char(20), lname char(20), score int, money float, timestamp long);
+insert into test(score, money, fname, lname, timestamp) values(120, 200.50, "albert1", "albert", 1643666769000);
+insert into test(score, money, fname, lname, timestamp) values(250, 32.50, "martian1", "mouse", 1643666728000);
+insert into test(score, money, fname, lname, timestamp) values(310, -44.50, "martian2", "mouse", 1643666432000);
+insert into test(score, money, fname, lname, timestamp) values(340, 11.50, "donald1", "duck", 1643666726000);
+insert into test(score, money, fname, lname, timestamp) values(110, 16, "goofy1", "goofy", 1643667762000);
+insert into test(score, money, fname, lname, timestamp) values(150, 12, "goofy2", "goofy", 1643667762000);
+insert into test(score, money, fname, lname, timestamp) values(100, -28, "daffy1", "daffy", 1643667092000);
+insert into test(score, money, fname, lname, timestamp) values(120, -16, "pluto1", "dwag", 1643666712000);
+insert into test(score, money, fname, lname, timestamp) values(120, -16, "zebra1", "zookeeper", 1643666712000);
+insert into test(score, money, fname, lname, timestamp) values(220, -16, "zebra2", "zookeeper", 1643666712000);
+insert into test(score, money, fname, lname, timestamp) values(150, 10.50, "alice1", "wonderland", 1650069985000);
+insert into test(score, money, fname, lname, timestamp) values(200, 1.50, "albert2", "albert", 1650050085000);
+insert into test(score, money, fname, lname, timestamp) values(32, 10.0, "mickey1", "mouse", 1650040085000);
+insert into test(score, money, fname, lname, timestamp) values(-40, 250, "minney2", "mouse", 1650043085000);
+insert into test(score, money, fname, lname, timestamp) values(10, 4.50, "donald2", "duck", 1650011085000);
+insert into test(score, money, fname, lname, timestamp) values(5, 7.50, "goofy3", "duck", 1650010085000);
+insert into test(score, money, fname, lname, timestamp) values(5, 4.50, "daffy2", "duck", 1650045085000);
+insert into test(score, money, fname, lname, timestamp) values(10, 46.0, "daffy3", "duck", 1650032085000);
+insert into test(score, money, fname, lname, timestamp) values(20, 20.5, "goofy4", "goofy", 1650011085000);
+insert into test(score, money, fname, lname, timestamp) values(-20, 2.5, "pluto2", "dwag", 1650052285000);

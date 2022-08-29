@@ -125,11 +125,12 @@ public interface DataTable {
     NUM_SEGMENTS_PRUNED_BY_LIMIT(22, "numSegmentsPrunedByLimit", MetadataValueType.INT),
     NUM_SEGMENTS_PRUNED_BY_VALUE(23, "numSegmentsPrunedByValue", MetadataValueType.INT),
     EXPLAIN_PLAN_NUM_EMPTY_FILTER_SEGMENTS(24, "explainPlanNumEmptyFilterSegments", MetadataValueType.INT),
-    EXPLAIN_PLAN_NUM_MATCH_ALL_FILTER_SEGMENTS(25, "explainPlanNumMatchAllFilterSegments", MetadataValueType.INT);
-
+    EXPLAIN_PLAN_NUM_MATCH_ALL_FILTER_SEGMENTS(25, "explainPlanNumMatchAllFilterSegments", MetadataValueType.INT),
+    WINDOW_FUNCTION_SEGMENT_ROW_LIMIT_REACHED(28, "windowFunctionRowLimitReachedSegment", MetadataValueType.STRING),
+    WINDOW_FUNCTION_SERVER_ROW_LIMIT_REACHED(29, "windowFunctionRowLimitReachedServer", MetadataValueType.STRING);
     // We keep this constant to track the max id added so far for backward compatibility.
     // Increase it when adding new keys, but NEVER DECREASE IT!!!
-    private static final int MAX_ID = 27;
+    private static final int MAX_ID = 29;
 
     private static final MetadataKey[] ID_TO_ENUM_KEY_MAP = new MetadataKey[MAX_ID + 1];
     private static final Map<String, MetadataKey> NAME_TO_ENUM_KEY_MAP = new HashMap<>();

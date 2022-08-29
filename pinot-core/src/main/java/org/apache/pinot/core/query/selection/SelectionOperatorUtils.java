@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import org.apache.pinot.common.function.TransformFunctionType;
 import org.apache.pinot.common.request.context.ExpressionContext;
 import org.apache.pinot.common.request.context.OrderByExpressionContext;
 import org.apache.pinot.common.response.broker.ResultTable;
@@ -94,6 +95,41 @@ public class SelectionOperatorUtils {
     }
 
     List<ExpressionContext> selectExpressions = queryContext.getSelectExpressions();
+
+    // ORDER BY column specified in the window function may not be part of the select list. Hence, to make queries
+    // such as "SELECT avg(score) over(order by lname) from myTable" work, we need to add all window function order
+    // by columns into the select list.
+    if (queryContext.hasWindowFunction()) {
+      for (ExpressionContext selectExpression : selectExpressions) {
+        if (selectExpression.getType() == ExpressionContext.Type.FUNCTION && selectExpression.getFunction()
+            .getFunctionName().equalsIgnoreCase(TransformFunctionType.WINDOW.getName())) {
+          List<OrderByExpressionContext> partitionByExpressionContexts = WindowFunctionContext
+              .getOrderByExpressionContextList(
+                  selectExpression.getFunction().getArguments().get(1).getFunction().getArguments());
+          if (partitionByExpressionContexts != null) {
+            for (OrderByExpressionContext partitionByExpression : partitionByExpressionContexts) {
+              ExpressionContext expression = partitionByExpression.getExpression();
+              if (expressionSet.add(expression)) {
+                expressions.add(expression);
+              }
+            }
+          }
+
+          List<OrderByExpressionContext> orderByExpressionContexts = WindowFunctionContext
+              .getOrderByExpressionContextList(
+                  selectExpression.getFunction().getArguments().get(2).getFunction().getArguments());
+          if (orderByExpressionContexts != null) {
+            for (OrderByExpressionContext orderByExpression : orderByExpressionContexts) {
+              ExpressionContext expression = orderByExpression.getExpression();
+              if (expressionSet.add(expression)) {
+                expressions.add(expression);
+              }
+            }
+          }
+        }
+      }
+    }
+
     if (selectExpressions.size() == 1 && selectExpressions.get(0).equals(IDENTIFIER_STAR)) {
       // For 'SELECT *', sort all columns (ignore columns that start with '$') so that the order is deterministic
       Set<String> allColumns = indexSegment.getColumnNames();
@@ -182,7 +218,9 @@ public class SelectionOperatorUtils {
     int numResultColumns = selectionColumns.size();
     ColumnDataType[] finalColumnDataTypes = new ColumnDataType[numResultColumns];
     for (int i = 0; i < numResultColumns; i++) {
-      finalColumnDataTypes[i] = columnNameToDataType.get(selectionColumns.get(i));
+      ColumnDataType columnDataType = columnNameToDataType.get(selectionColumns.get(i));
+      // modify schema to reset OBJECT columns (which represent window function values) to DOUBLE.
+      finalColumnDataTypes[i] = columnDataType == ColumnDataType.OBJECT ? ColumnDataType.DOUBLE : columnDataType;
     }
     return new DataSchema(selectionColumns.toArray(new String[0]), finalColumnDataTypes);
   }
@@ -339,7 +377,9 @@ public class SelectionOperatorUtils {
           case STRING_ARRAY:
             dataTableBuilder.setColumn(i, (String[]) columnValue);
             break;
-
+          case OBJECT:
+            dataTableBuilder.setColumn(i, columnValue);
+            break;
           default:
             throw new IllegalStateException(
                 String.format("Unsupported data type: %s for column: %s", storedColumnDataTypes[i],
@@ -411,7 +451,9 @@ public class SelectionOperatorUtils {
         case STRING_ARRAY:
           row[i] = dataTable.getStringArray(rowId, i);
           break;
-
+        case OBJECT:
+          row[i] = dataTable.getObject(rowId, i);
+          break;
         default:
           throw new IllegalStateException(
               String.format("Unsupported data type: %s for column: %s", storedColumnDataTypes[i],
@@ -557,5 +599,31 @@ public class SelectionOperatorUtils {
       queue.poll();
       queue.offer(value);
     }
+  }
+
+  /**
+   *  This function checks whether all columns in order by clause are pre-sorted.
+   *  This is used to optimize order by limit clauses.
+   *  For eg:
+   *  A query like "select * from table order by col1, col2 limit 10"
+   *  will take all the n matching rows and add it to a priority queue of size 10.
+   *  This is nlogk operation which can be quite expensive for a large n.
+   *  In the above example, if the docs in the segment are already sorted by col1 and col2 then there is no need for
+   *  sorting at all (only limit is needed).
+   * @return true is all columns in order by clause are sorted . False otherwise
+   */
+  public static boolean isAllOrderByColumnsSorted(IndexSegment indexSegment,
+      List<OrderByExpressionContext> orderByExpressions) {
+    for (OrderByExpressionContext orderByExpression : orderByExpressions) {
+      if (!(orderByExpression.getExpression().getType() == ExpressionContext.Type.IDENTIFIER)
+          || !orderByExpression.isAsc()) {
+        return false;
+      }
+      String column = orderByExpression.getExpression().getIdentifier();
+      if (!indexSegment.getDataSource(column).getDataSourceMetadata().isSorted()) {
+        return false;
+      }
+    }
+    return true;
   }
 }

@@ -231,6 +231,11 @@ public class CommonConstants {
     public static final String CONFIG_OF_BROKER_GROUPBY_TRIM_THRESHOLD = "pinot.broker.groupby.trim.threshold";
     public static final int DEFAULT_BROKER_GROUPBY_TRIM_THRESHOLD = 1_000_000;
 
+    // Maximum number of rows that the broker will reduce for queries containing window function. Note that this is
+    // different than SQL LIMIT clause.
+    public static final String WINDOW_FUNCTION_RESULT_ROWS_MAX = "pinot.broker.window.result.rows.max";
+    public static final int DEFAULT_WINDOW_FUNCTION_RESULT_ROWS_MAX = 100_000_000;
+
     // Configure the request handler type used by broker to handler inbound query request.
     // NOTE: the request handler type refers to the communication between Broker and Server.
     public static final String BROKER_REQUEST_HANDLER_TYPE = "pinot.broker.request.handler.type";

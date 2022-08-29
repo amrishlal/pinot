@@ -106,6 +106,10 @@ public abstract class BaseQueriesTest {
     return getBrokerResponse(query, PLAN_MAKER);
   }
 
+  protected BrokerResponseNative getBrokerResponse(String query, boolean mimicRealtimeServer) {
+    return getBrokerResponse(query, PLAN_MAKER, null, mimicRealtimeServer);
+  }
+
   /**
    * Run query with hard-coded filter on multiple index segments.
    * <p>Use this to test the whole flow from server to broker.
@@ -131,7 +135,7 @@ public abstract class BaseQueriesTest {
    * @see CovarianceQueriesTest for an example use case.
    */
   protected BrokerResponseNative getBrokerResponse(String query, PlanMaker planMaker) {
-    return getBrokerResponse(query, planMaker, null);
+    return getBrokerResponse(query, planMaker, null, true);
   }
 
   /**
@@ -145,7 +149,7 @@ public abstract class BaseQueriesTest {
    * @see CovarianceQueriesTest for an example use case.
    */
   protected BrokerResponseNative getBrokerResponse(String query, @Nullable Map<String, String> extraQueryOptions) {
-    return getBrokerResponse(query, PLAN_MAKER, extraQueryOptions);
+    return getBrokerResponse(query, PLAN_MAKER, extraQueryOptions, true);
   }
 
   /**
@@ -159,7 +163,7 @@ public abstract class BaseQueriesTest {
    * @see CovarianceQueriesTest for an example use case.
    */
   private BrokerResponseNative getBrokerResponse(String query, PlanMaker planMaker,
-      @Nullable Map<String, String> extraQueryOptions) {
+      @Nullable Map<String, String> extraQueryOptions, boolean mimicRealtimeServer) {
     PinotQuery pinotQuery = CalciteSqlParser.compileToPinotQuery(query);
     if (extraQueryOptions != null) {
       Map<String, String> queryOptions = pinotQuery.getQueryOptions();
@@ -169,7 +173,7 @@ public abstract class BaseQueriesTest {
       }
       queryOptions.putAll(extraQueryOptions);
     }
-    return getBrokerResponse(pinotQuery, planMaker);
+    return getBrokerResponse(pinotQuery, planMaker, mimicRealtimeServer);
   }
 
   /**
@@ -182,7 +186,8 @@ public abstract class BaseQueriesTest {
    * This can be particularly useful to test statistical aggregation functions.
    * @see CovarianceQueriesTest for an example use case.
    */
-  private BrokerResponseNative getBrokerResponse(PinotQuery pinotQuery, PlanMaker planMaker) {
+  private BrokerResponseNative getBrokerResponse(PinotQuery pinotQuery, PlanMaker planMaker,
+      boolean mimicRealtimeServer) {
     PinotQuery serverPinotQuery = GapfillUtils.stripGapfill(pinotQuery);
     QueryContext queryContext = QueryContextConverterUtils.getQueryContext(pinotQuery);
     QueryContext serverQueryContext =
@@ -209,8 +214,10 @@ public abstract class BaseQueriesTest {
       byte[] serializedResponse = instanceResponse.toBytes();
       dataTableMap.put(new ServerRoutingInstance("localhost", 1234, TableType.OFFLINE),
           DataTableFactory.getDataTable(serializedResponse));
-      dataTableMap.put(new ServerRoutingInstance("localhost", 1234, TableType.REALTIME),
-          DataTableFactory.getDataTable(serializedResponse));
+      if (mimicRealtimeServer) {
+        dataTableMap.put(new ServerRoutingInstance("localhost", 1234, TableType.REALTIME),
+            DataTableFactory.getDataTable(serializedResponse));
+      }
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -239,7 +246,7 @@ public abstract class BaseQueriesTest {
       @Nullable Schema schema) {
     PinotQuery pinotQuery = CalciteSqlParser.compileToPinotQuery(query);
     OPTIMIZER.optimize(pinotQuery, config, schema);
-    return getBrokerResponse(pinotQuery, PLAN_MAKER);
+    return getBrokerResponse(pinotQuery, PLAN_MAKER, true);
   }
 
   /**

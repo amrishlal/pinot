@@ -25,7 +25,7 @@ import org.apache.pinot.core.query.aggregation.function.AggregationFunction;
 import org.apache.pinot.core.query.aggregation.function.AggregationFunctionUtils;
 
 
-public class DefaultAggregationExecutor implements AggregationExecutor {
+public class DefaultAggregationExecutor implements AggregationExecutor<Object> {
   protected final AggregationFunction[] _aggregationFunctions;
   protected final AggregationResultHolder[] _aggregationResultHolders;
 

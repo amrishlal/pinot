@@ -38,7 +38,7 @@ public class QueryContextUtils {
    * Returns {@code true} if the given query is a selection query, {@code false} otherwise.
    */
   public static boolean isSelectionQuery(QueryContext query) {
-    return query.getAggregationFunctions() == null;
+    return query.getAggregationFunctions() == null || query.hasWindowFunction();
   }
 
   /**
@@ -47,7 +47,7 @@ public class QueryContextUtils {
    * Selection-only query at this moment means selection query without order-by.
    */
   public static boolean isSelectionOnlyQuery(QueryContext query) {
-    return query.getAggregationFunctions() == null && query.getOrderByExpressions() == null;
+    return isSelectionQuery(query) && query.getOrderByExpressions() == null;
   }
 
   /**
@@ -55,7 +55,7 @@ public class QueryContextUtils {
    */
   public static boolean isAggregationQuery(QueryContext query) {
     AggregationFunction[] aggregationFunctions = query.getAggregationFunctions();
-    return aggregationFunctions != null && (aggregationFunctions.length != 1
+    return !isSelectionQuery(query) && (aggregationFunctions.length != 1
         || !(aggregationFunctions[0] instanceof DistinctAggregationFunction));
   }
 

@@ -95,6 +95,9 @@ public enum TransformFunctionType {
   INIDSET("inIdSet"),
   LOOKUP("lookUp"),
   GROOVY("groovy"),
+  WINDOW("window"),
+  WINDOW_ORDER("windowOrder"),
+  WINDOW_PARTITION("windowPartition"),
 
   // Regexp functions
   REGEXP_EXTRACT("regexpExtract"),
