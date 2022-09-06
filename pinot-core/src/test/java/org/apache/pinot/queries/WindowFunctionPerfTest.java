@@ -160,7 +160,7 @@ public class WindowFunctionPerfTest extends BaseQueriesTest {
   }
 
   @Test
-  public void profileWindowFunctionQuery() {
+  public void perfWindowFunctionQuery() {
     String query = "";
     query += "SELECT fname, lname, max(score) over(order by lname) FROM testTable LIMIT 1000000";
     System.out.println("Time, Rows");
@@ -174,12 +174,18 @@ public class WindowFunctionPerfTest extends BaseQueriesTest {
         avg += elapsed;
         ++count;
       }
+//
+//      List<Object[]> rows = response.getResultTable().getRows();
+//      for (int k = 0; k < rows.size(); k++) {
+//        Object[] actual = rows.get(i);
+//        print(actual);
+//      }
     }
     System.out.println("Average: " + (avg/count));
   }
 
   @Test
-  public void profileOrderByQuery() {
+  public void perfOrderByQuery() {
     String query = "";
     query += "SELECT fname, lname, score FROM testTable ORDER BY lname LIMIT 1000000";
     System.out.println("Time, Rows");
@@ -195,6 +201,23 @@ public class WindowFunctionPerfTest extends BaseQueriesTest {
       }
     }
     System.out.println("Average: " + (avg/count));
+  }
+
+
+  private void print(Object[] array) {
+    System.out.print("{");
+    for (int i = 0; i < array.length; i++) {
+      Object o = array[i];
+      if (i > 0) {
+        System.out.print(", ");
+      }
+      if (o instanceof String) {
+        System.out.print("\"" + o + "\"");
+      } else {
+        System.out.print(o);
+      }
+    }
+    System.out.print("}, ");
   }
 
   @AfterClass
