@@ -149,12 +149,31 @@ public class StagePlanner {
       return mailboxReceiver;
     } else {
       StageNode stageNode = RelToStageConverter.toStageNode(node, currentStageId);
-      StageNode windowNode = null;
       if (stageNode instanceof ProjectNode) {
         ProjectNode projectNode = (ProjectNode) stageNode;
         if (projectNode.hasWindowFunctions()) {
-          windowNode = new WindowNode(currentStageId, projectNode.getProjects(), projectNode.getDataSchema());
-          windowNode.addInput(projectNode);
+          List<RelNode> inputs = node.getInputs();
+          for (RelNode input : inputs) {
+            projectNode.addInput(walkRelPlan(input, currentStageId));
+          }
+          projectNode.setStageId(getNewStageId());
+
+          StageNode windowNode = new WindowNode(currentStageId, projectNode.getProjects(),
+              projectNode.getDataSchema());
+
+          StageNode mailboxReceiver = new MailboxReceiveNode(windowNode.getStageId(), windowNode.getDataSchema(),
+              projectNode.getStageId(), RelDistribution.Type.SINGLETON, null);
+          mailboxReceiver.addInput(windowNode);
+
+          StageNode mailboxSender = new MailboxReceiveNode(projectNode.getStageId(), projectNode.getDataSchema(),
+              mailboxReceiver.getStageId(), RelDistribution.Type.SINGLETON, null);
+          mailboxSender.addInput(projectNode);
+
+          _queryStageMap.put(mailboxSender.getStageId(), mailboxSender);
+          updateStageMetadata(mailboxSender.getStageId(), mailboxSender, _stageMetadataMap);
+          updateStageMetadata(mailboxReceiver.getStageId(), mailboxReceiver, _stageMetadataMap);
+
+          return mailboxReceiver;
         }
       }
 
@@ -163,7 +182,7 @@ public class StagePlanner {
         stageNode.addInput(walkRelPlan(input, currentStageId));
       }
       updateStageMetadata(currentStageId, stageNode, _stageMetadataMap);
-      return windowNode != null ? windowNode : stageNode;
+      return stageNode;
     }
   }
 

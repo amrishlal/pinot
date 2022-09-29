@@ -57,4 +57,8 @@ public class ProjectNode extends AbstractStageNode {
   public boolean hasWindowFunctions() {
     return _hasWindow;
   }
+
+  public void setStageId(int stageId) {
+    _stageId = stageId;
+  }
 }
