@@ -63,7 +63,7 @@ import org.slf4j.LoggerFactory;
 
 public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(MultiStageBrokerRequestHandler.class);
-  private static final long DEFAULT_TIMEOUT_NANO = 10_000_000_000L;
+  private static final long DEFAULT_TIMEOUT_NANO = 10_000_000_000_000L;
   private final String _reducerHostname;
   private final int _reducerPort;
 

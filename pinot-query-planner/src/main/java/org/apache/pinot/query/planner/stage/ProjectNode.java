@@ -18,6 +18,7 @@
  */
 package org.apache.pinot.query.planner.stage;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.calcite.rex.RexNode;
@@ -30,15 +31,30 @@ public class ProjectNode extends AbstractStageNode {
   @ProtoProperties
   private List<RexExpression> _projects;
 
+  @ProtoProperties
+  private boolean _hasWindow;
+
   public ProjectNode(int stageId) {
     super(stageId);
   }
   public ProjectNode(int currentStageId, DataSchema dataSchema, List<RexNode> projects) {
     super(currentStageId, dataSchema);
+    _projects = new ArrayList<>();
+    for (RexNode project : projects) {
+      RexExpression rexExpression = RexExpression.toRexExpression(project);
+      if (rexExpression instanceof RexExpression.WindowFunctionExpression) {
+        _hasWindow = true;
+      }
+      _projects.add(rexExpression);
+    }
     _projects = projects.stream().map(RexExpression::toRexExpression).collect(Collectors.toList());
   }
 
   public List<RexExpression> getProjects() {
     return _projects;
+  }
+
+  public boolean hasWindowFunctions() {
+    return _hasWindow;
   }
 }

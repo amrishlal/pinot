@@ -71,6 +71,8 @@ public final class StageNodeSerDeUtils {
         return new JoinNode(stageId);
       case "ProjectNode":
         return new ProjectNode(stageId);
+      case "WindowNode":
+        return new WindowNode(stageId);
       case "FilterNode":
         return new FilterNode(stageId);
       case "AggregateNode":

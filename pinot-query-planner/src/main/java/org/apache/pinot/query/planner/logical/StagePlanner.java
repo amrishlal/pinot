@@ -40,6 +40,7 @@ import org.apache.pinot.query.planner.stage.MailboxSendNode;
 import org.apache.pinot.query.planner.stage.ProjectNode;
 import org.apache.pinot.query.planner.stage.StageNode;
 import org.apache.pinot.query.planner.stage.TableScanNode;
+import org.apache.pinot.query.planner.stage.WindowNode;
 import org.apache.pinot.query.routing.WorkerManager;
 
 
@@ -148,12 +149,21 @@ public class StagePlanner {
       return mailboxReceiver;
     } else {
       StageNode stageNode = RelToStageConverter.toStageNode(node, currentStageId);
+      StageNode windowNode = null;
+      if (stageNode instanceof ProjectNode) {
+        ProjectNode projectNode = (ProjectNode) stageNode;
+        if (projectNode.hasWindowFunctions()) {
+          windowNode = new WindowNode(currentStageId, projectNode.getProjects(), projectNode.getDataSchema());
+          windowNode.addInput(projectNode);
+        }
+      }
+
       List<RelNode> inputs = node.getInputs();
       for (RelNode input : inputs) {
         stageNode.addInput(walkRelPlan(input, currentStageId));
       }
       updateStageMetadata(currentStageId, stageNode, _stageMetadataMap);
-      return stageNode;
+      return windowNode != null ? windowNode : stageNode;
     }
   }
 

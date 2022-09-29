@@ -133,6 +133,7 @@ public class ServerQueryExecutorV1Impl implements QueryExecutor {
   @Override
   public DataTable processQuery(ServerQueryRequest queryRequest, ExecutorService executorService,
       @Nullable StreamObserver<Server.ServerResponse> responseObserver) {
+
     if (!queryRequest.isEnableTrace()) {
       return processQueryInternal(queryRequest, executorService, responseObserver);
     }

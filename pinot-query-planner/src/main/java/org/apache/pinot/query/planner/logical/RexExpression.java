@@ -18,15 +18,21 @@
  */
 package org.apache.pinot.query.planner.logical;
 
+import com.google.common.collect.ImmutableList;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexFieldCollation;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexOver;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.util.NlsString;
 import org.apache.pinot.common.utils.PinotDataType;
@@ -51,6 +57,26 @@ public interface RexExpression {
       RexLiteral rexLiteral = ((RexLiteral) rexNode);
       FieldSpec.DataType dataType = toDataType(rexLiteral.getType());
       return new RexExpression.Literal(dataType, toRexValue(dataType, rexLiteral.getValue()));
+    } else if (rexNode instanceof RexOver) {
+      RexOver rexOver = (RexOver) rexNode;
+
+      RexExpression aggFunctionCall = toRexExpression(rexOver.getAggOperator(), rexOver.getType(),
+          rexOver.getOperands().stream().map(RexExpression::toRexExpression).collect(Collectors.toList()));
+
+      List<RexExpression> partitionKeys =
+          rexOver.getWindow().partitionKeys.stream().map(RexExpression::toRexExpression).collect(Collectors.toList());
+
+      ImmutableList<RexFieldCollation> orderKeys = rexOver.getWindow().orderKeys;
+      List<RexExpression> rexOrderKeys = new ArrayList<>(orderKeys.size());
+      List<RelFieldCollation.Direction> rexOrderDirection = new ArrayList<>(orderKeys.size());
+
+      for (RexFieldCollation orderKey : rexOver.getWindow().orderKeys) {
+        rexOrderKeys.add(toRexExpression(orderKey.getKey()));
+        rexOrderDirection.add(orderKey.getDirection());
+      }
+
+      return new WindowFunctionExpression(toDataType(rexOver.getType()), (RexExpression.FunctionCall) aggFunctionCall,
+          partitionKeys, rexOrderKeys, rexOrderDirection);
     } else if (rexNode instanceof RexCall) {
       RexCall rexCall = (RexCall) rexNode;
       return toRexExpression(rexCall);
@@ -73,6 +99,12 @@ public interface RexExpression {
         return new RexExpression.FunctionCall(rexCall.getKind(), toDataType(rexCall.getType()),
             rexCall.getOperator().getName(), operands);
     }
+  }
+
+  static RexExpression toRexExpression(SqlAggFunction sqlAggFunction, RelDataType relDataType,
+      List<RexExpression> operands) {
+    return new RexExpression.FunctionCall(sqlAggFunction.getKind(), toDataType(relDataType),
+        sqlAggFunction.getName(), operands);
   }
 
   static PinotDataType toPinotDataType(RelDataType type) {
@@ -236,6 +268,62 @@ public interface RexExpression {
 
     public FieldSpec.DataType getDataType() {
       return _dataType;
+    }
+  }
+
+  class WindowFunctionExpression implements RexExpression {
+    @ProtoProperties
+    private SqlKind _sqlKind;
+
+    @ProtoProperties
+    private FieldSpec.DataType _dataType;
+
+    @ProtoProperties
+    RexExpression.FunctionCall _aggFunction;
+
+    @ProtoProperties
+    private List<RexExpression>  _partitionKeys;
+
+    @ProtoProperties
+    private List<RexExpression> _orderKeys;
+
+    @ProtoProperties
+    private List<RelFieldCollation.Direction> _orderKeysDirection;
+
+    public WindowFunctionExpression() {
+    }
+
+    public WindowFunctionExpression(FieldSpec.DataType type, RexExpression.FunctionCall aggFunction,
+        List<RexExpression> partitionKeys, List<RexExpression> orderKeys,
+        List<RelFieldCollation.Direction> orderKeysDirection) {
+      _sqlKind = SqlKind.WINDOW;
+      _dataType = type;
+      _aggFunction = aggFunction;
+      _partitionKeys = partitionKeys;
+      _orderKeys = orderKeys;
+      _orderKeysDirection = orderKeysDirection;
+    }
+
+    public RexExpression.FunctionCall getFunctionCall() {
+      return _aggFunction;
+    }
+
+    public List<RexExpression>  getPartitionKeys() {
+      return _partitionKeys;
+    }
+
+    public List<RexExpression> getOrderKeys() {
+      return _orderKeys;
+    }
+
+    @Override
+    public SqlKind getKind() {
+      return _sqlKind;
+    }
+
+    @Override
+    public FieldSpec.DataType getDataType() {
+      return null;
     }
   }
 }

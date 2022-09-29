@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.commons.math3.analysis.function.Exp;
 import org.apache.pinot.common.request.Expression;
 import org.apache.pinot.common.request.ExpressionType;
 import org.apache.pinot.common.request.Function;
@@ -64,10 +65,32 @@ public class CalciteRexExpressionParser {
     final Iterator<RexExpression> iterator = rexNodeList.iterator();
     while (iterator.hasNext()) {
       final RexExpression next = iterator.next();
-      selectExpr.add(toExpression(next, pinotQuery));
+      if (next.getKind() == SqlKind.WINDOW) {
+        RexExpression.WindowFunctionExpression window = (RexExpression.WindowFunctionExpression) next;
+        // first add all columns from aggregate function
+        addColumnsToSelectList(selectExpr, window.getFunctionCall().getFunctionOperands(), pinotQuery);
+
+        // add columns from partition list
+        addColumnsToSelectList(selectExpr, window.getPartitionKeys(), pinotQuery);
+
+        // add columns from order list
+        addColumnsToSelectList(selectExpr, window.getOrderKeys(), pinotQuery);
+      } else {
+        selectExpr.add(toExpression(next, pinotQuery));
+      }
     }
 
     return selectExpr;
+  }
+
+  private static void addColumnsToSelectList(List<Expression> selectExpr, List<RexExpression> columns, PinotQuery pinotQuery) {
+    for (RexExpression column : columns) {
+      if (column.getKind() == SqlKind.INPUT_REF) {
+        selectExpr.add(inputRefToIdentifier((RexExpression.InputRef) column, pinotQuery));
+      } else {
+        throw new SqlCompilationException("Window functions can only take column name as input argument.");
+      }
+    }
   }
 
   public static List<Expression> convertGroupByList(List<RexExpression> rexNodeList, PinotQuery pinotQuery) {

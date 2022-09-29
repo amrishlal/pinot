@@ -48,6 +48,7 @@ import org.apache.pinot.query.planner.stage.ProjectNode;
 import org.apache.pinot.query.planner.stage.SortNode;
 import org.apache.pinot.query.planner.stage.StageNode;
 import org.apache.pinot.query.planner.stage.TableScanNode;
+import org.apache.pinot.query.planner.stage.WindowNode;
 import org.apache.pinot.query.runtime.plan.DistributedStagePlan;
 import org.apache.pinot.spi.config.table.TableConfig;
 import org.apache.pinot.spi.config.table.TableType;
@@ -179,8 +180,9 @@ public class ServerRequestUtils {
       pinotQuery.setFilterExpression(CalciteRexExpressionParser.toExpression(
           ((FilterNode) node).getCondition(), pinotQuery));
     } else if (node instanceof ProjectNode) {
-      pinotQuery.setSelectList(CalciteRexExpressionParser.overwriteSelectList(
-          ((ProjectNode) node).getProjects(), pinotQuery));
+      pinotQuery.setSelectList(CalciteRexExpressionParser.overwriteSelectList(((ProjectNode) node).getProjects(), pinotQuery));
+    } else if (node instanceof WindowNode) {
+      // Ignore WindowNode for generating server queries.
     } else if (node instanceof AggregateNode) {
       // set agg list
       pinotQuery.setSelectList(CalciteRexExpressionParser.addSelectList(pinotQuery.getSelectList(),
