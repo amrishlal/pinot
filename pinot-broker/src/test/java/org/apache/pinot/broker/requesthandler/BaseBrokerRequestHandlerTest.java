@@ -207,7 +207,7 @@ public class BaseBrokerRequestHandlerTest {
         new PinotConfiguration(Collections.singletonMap("pinot.broker.enable.query.cancellation", "true"));
     BaseBrokerRequestHandler requestHandler =
         new BaseBrokerRequestHandler(config, routingManager, new AllowAllAccessControlFactory(),
-            queryQuotaManager, tableCache,
+            queryQuotaManager, tableCache, null,
             new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet())) {
           @Override
           public void start() {

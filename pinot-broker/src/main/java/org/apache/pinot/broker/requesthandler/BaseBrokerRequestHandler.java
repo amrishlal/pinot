@@ -49,6 +49,7 @@ import org.apache.pinot.broker.broker.AccessControlFactory;
 import org.apache.pinot.broker.querylog.QueryLogger;
 import org.apache.pinot.broker.queryquota.QueryQuotaManager;
 import org.apache.pinot.broker.routing.BrokerRoutingManager;
+import org.apache.pinot.common.config.provider.BrokerQueryResultCache;
 import org.apache.pinot.common.config.provider.TableCache;
 import org.apache.pinot.common.exception.QueryException;
 import org.apache.pinot.common.http.MultiHttpRequest;
@@ -112,6 +113,7 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
   protected final AccessControlFactory _accessControlFactory;
   protected final QueryQuotaManager _queryQuotaManager;
   protected final TableCache _tableCache;
+  protected final BrokerQueryResultCache _queryResultCache;
   protected final BrokerMetrics _brokerMetrics;
 
   protected final AtomicLong _requestIdGenerator = new AtomicLong();
@@ -131,7 +133,7 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
 
   public BaseBrokerRequestHandler(PinotConfiguration config, BrokerRoutingManager routingManager,
       AccessControlFactory accessControlFactory, QueryQuotaManager queryQuotaManager, TableCache tableCache,
-      BrokerMetrics brokerMetrics) {
+      BrokerQueryResultCache queryResultCache, BrokerMetrics brokerMetrics) {
     _config = config;
     _routingManager = routingManager;
     _accessControlFactory = accessControlFactory;
@@ -158,6 +160,7 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
         "Broker Id: {}, timeout: {}ms, query response limit: {}, query log length: {}, query log max rate: {}qps, "
             + "enabling query cancellation: {}", _brokerId, _brokerTimeoutMs, _queryResponseLimit,
         _queryLogger.getMaxQueryLengthToLog(), _queryLogger.getLogRateLimit(), enableQueryCancellation);
+    _queryResultCache = queryResultCache;
   }
 
   private String getDefaultBrokerId() {

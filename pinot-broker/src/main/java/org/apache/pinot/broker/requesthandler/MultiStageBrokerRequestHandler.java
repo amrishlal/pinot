@@ -30,6 +30,7 @@ import org.apache.pinot.broker.api.RequesterIdentity;
 import org.apache.pinot.broker.broker.AccessControlFactory;
 import org.apache.pinot.broker.queryquota.QueryQuotaManager;
 import org.apache.pinot.broker.routing.BrokerRoutingManager;
+import org.apache.pinot.common.config.provider.BrokerQueryResultCache;
 import org.apache.pinot.common.config.provider.TableCache;
 import org.apache.pinot.common.exception.QueryException;
 import org.apache.pinot.common.metrics.BrokerMeter;
@@ -72,9 +73,9 @@ public class MultiStageBrokerRequestHandler extends BaseBrokerRequestHandler {
   private final QueryDispatcher _queryDispatcher;
 
   public MultiStageBrokerRequestHandler(PinotConfiguration config, BrokerRoutingManager routingManager,
-      AccessControlFactory accessControlFactory, QueryQuotaManager queryQuotaManager, TableCache tableCache,
-      BrokerMetrics brokerMetrics) {
-    super(config, routingManager, accessControlFactory, queryQuotaManager, tableCache, brokerMetrics);
+      AccessControlFactory accessControlFactory, QueryQuotaManager queryQuotaManager,
+      TableCache tableCache, BrokerQueryResultCache queryResultCache, BrokerMetrics brokerMetrics) {
+    super(config, routingManager, accessControlFactory, queryQuotaManager, tableCache, queryResultCache, brokerMetrics);
     LOGGER.info("Using Multi-stage BrokerRequestHandler.");
     String reducerHostname = config.getProperty(QueryConfig.KEY_OF_QUERY_RUNNER_HOSTNAME);
     if (reducerHostname == null) {

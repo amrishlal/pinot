@@ -32,6 +32,7 @@ import org.apache.pinot.broker.queryquota.QueryQuotaManager;
 import org.apache.pinot.broker.routing.BrokerRoutingManager;
 import org.apache.pinot.common.config.NettyConfig;
 import org.apache.pinot.common.config.TlsConfig;
+import org.apache.pinot.common.config.provider.BrokerQueryResultCache;
 import org.apache.pinot.common.config.provider.TableCache;
 import org.apache.pinot.common.datatable.DataTable;
 import org.apache.pinot.common.exception.QueryException;
@@ -41,6 +42,7 @@ import org.apache.pinot.common.metrics.BrokerQueryPhase;
 import org.apache.pinot.common.request.BrokerRequest;
 import org.apache.pinot.common.response.broker.BrokerResponseNative;
 import org.apache.pinot.common.response.broker.QueryProcessingException;
+import org.apache.pinot.common.response.broker.ResultTable;
 import org.apache.pinot.common.utils.HashUtil;
 import org.apache.pinot.core.query.reduce.BrokerReduceService;
 import org.apache.pinot.core.transport.AsyncQueryResponse;
@@ -71,9 +73,9 @@ public class SingleConnectionBrokerRequestHandler extends BaseBrokerRequestHandl
 
   public SingleConnectionBrokerRequestHandler(PinotConfiguration config, BrokerRoutingManager routingManager,
       AccessControlFactory accessControlFactory, QueryQuotaManager queryQuotaManager, TableCache tableCache,
-      BrokerMetrics brokerMetrics, NettyConfig nettyConfig, TlsConfig tlsConfig,
-      ServerRoutingStatsManager serverRoutingStatsManager) {
-    super(config, routingManager, accessControlFactory, queryQuotaManager, tableCache, brokerMetrics);
+      BrokerQueryResultCache queryResultCache, BrokerMetrics brokerMetrics, NettyConfig nettyConfig,
+      TlsConfig tlsConfig, ServerRoutingStatsManager serverRoutingStatsManager) {
+    super(config, routingManager, accessControlFactory, queryQuotaManager, tableCache, queryResultCache, brokerMetrics);
     LOGGER.info("Using Netty BrokerRequestHandler.");
 
     _brokerReduceService = new BrokerReduceService(_config);
@@ -105,6 +107,16 @@ public class SingleConnectionBrokerRequestHandler extends BaseBrokerRequestHandl
     if (requestContext.isSampledRequest()) {
       serverBrokerRequest.getPinotQuery().putToQueryOptions(CommonConstants.Broker.Request.TRACE, "true");
     }
+
+    ResultTable cachedResultTable = _queryResultCache.get(originalBrokerRequest.pinotQuery);
+    if (cachedResultTable != null) {
+      System.out.println("Found in cache");
+      serverStats.setServerStats("QRC");
+      BrokerResponseNative brokerResponseNative = new BrokerResponseNative();
+      brokerResponseNative.setResultTable(cachedResultTable);
+      return brokerResponseNative;
+    }
+    System.out.println("Not found in cache");
 
     String rawTableName = TableNameBuilder.extractRawTableName(serverBrokerRequest.getQuerySource().getTableName());
     long scatterGatherStartTimeNs = System.nanoTime();
@@ -164,6 +176,10 @@ public class SingleConnectionBrokerRequestHandler extends BaseBrokerRequestHandl
     }
     _brokerMetrics.addMeteredTableValue(rawTableName, BrokerMeter.TOTAL_SERVER_RESPONSE_SIZE, totalResponseSize);
 
+    // Add query results to QRC
+    BrokerRequest originalBrokerRequestCopy = originalBrokerRequest.deepCopy();
+    System.out.println("Adding to cache");
+    _queryResultCache.put(originalBrokerRequest.pinotQuery, brokerResponse.getResultTable());
     return brokerResponse;
   }
 

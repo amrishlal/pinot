@@ -182,7 +182,7 @@ public class LiteralOnlyBrokerRequestTest {
       throws Exception {
     SingleConnectionBrokerRequestHandler requestHandler =
         new SingleConnectionBrokerRequestHandler(new PinotConfiguration(), null, ACCESS_CONTROL_FACTORY, null, null,
-            new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet()),
+            null, new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet()),
             null, null, mock(ServerRoutingStatsManager.class));
 
     long randNum = RANDOM.nextLong();
@@ -210,7 +210,7 @@ public class LiteralOnlyBrokerRequestTest {
       throws Exception {
     SingleConnectionBrokerRequestHandler requestHandler =
         new SingleConnectionBrokerRequestHandler(new PinotConfiguration(), null, ACCESS_CONTROL_FACTORY, null, null,
-            new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet()),
+            null, new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet()),
             null, null, mock(ServerRoutingStatsManager.class));
     long currentTsMin = System.currentTimeMillis();
     JsonNode request = JsonUtils.stringToJsonNode(
@@ -417,8 +417,8 @@ public class LiteralOnlyBrokerRequestTest {
       throws Exception {
     SingleConnectionBrokerRequestHandler requestHandler =
         new SingleConnectionBrokerRequestHandler(new PinotConfiguration(), null, ACCESS_CONTROL_FACTORY, null, null,
-            new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet()),
-            null, null, mock(ServerRoutingStatsManager.class));
+            null, new BrokerMetrics("", PinotMetricUtils.getPinotMetricsRegistry(), true, Collections.emptySet()), null,
+            null, mock(ServerRoutingStatsManager.class));
 
     // Test 1: select constant
     JsonNode request = JsonUtils.stringToJsonNode("{\"sql\":\"EXPLAIN PLAN FOR SELECT 1.5, 'test'\"}");

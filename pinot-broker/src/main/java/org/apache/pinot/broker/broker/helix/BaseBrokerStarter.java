@@ -49,6 +49,7 @@ import org.apache.pinot.broker.routing.BrokerRoutingManager;
 import org.apache.pinot.common.Utils;
 import org.apache.pinot.common.config.NettyConfig;
 import org.apache.pinot.common.config.TlsConfig;
+import org.apache.pinot.common.config.provider.BrokerQueryResultCache;
 import org.apache.pinot.common.config.provider.TableCache;
 import org.apache.pinot.common.function.FunctionRegistry;
 import org.apache.pinot.common.metadata.ZKMetadataProvider;
@@ -259,6 +260,7 @@ public abstract class BaseBrokerStarter implements ServiceStartable {
         _brokerConf.getProperty(Helix.ENABLE_CASE_INSENSITIVE_KEY, false) || _brokerConf.getProperty(
             Helix.DEPRECATED_ENABLE_CASE_INSENSITIVE_KEY, false);
     TableCache tableCache = new TableCache(_propertyStore, caseInsensitive);
+    BrokerQueryResultCache queryResultCache = new BrokerQueryResultCache();
     // Configure TLS for netty connection to server
     TlsConfig tlsDefaults = TlsUtils.extractTlsConfig(_brokerConf, Broker.BROKER_TLS_PREFIX);
     NettyConfig nettyDefaults = NettyConfig.extractNettyConfig(_brokerConf, Broker.BROKER_NETTY_PREFIX);
@@ -270,16 +272,18 @@ public abstract class BaseBrokerStarter implements ServiceStartable {
     if (brokerRequestHandlerType.equalsIgnoreCase(Broker.GRPC_BROKER_REQUEST_HANDLER_TYPE)) {
       singleStageBrokerRequestHandler =
           new GrpcBrokerRequestHandler(_brokerConf, _routingManager, _accessControlFactory, queryQuotaManager,
-              tableCache, _brokerMetrics, null);
+              tableCache, queryResultCache, _brokerMetrics, null);
     } else { // default request handler type, e.g. netty
       if (_brokerConf.getProperty(Broker.BROKER_NETTYTLS_ENABLED, false)) {
         singleStageBrokerRequestHandler =
             new SingleConnectionBrokerRequestHandler(_brokerConf, _routingManager, _accessControlFactory,
-                queryQuotaManager, tableCache, _brokerMetrics, nettyDefaults, tlsDefaults, _serverRoutingStatsManager);
+                queryQuotaManager, tableCache, queryResultCache, _brokerMetrics, nettyDefaults, tlsDefaults,
+                _serverRoutingStatsManager);
       } else {
         singleStageBrokerRequestHandler =
             new SingleConnectionBrokerRequestHandler(_brokerConf, _routingManager, _accessControlFactory,
-                queryQuotaManager, tableCache, _brokerMetrics, nettyDefaults, null, _serverRoutingStatsManager);
+                queryQuotaManager, tableCache, queryResultCache, _brokerMetrics, nettyDefaults, null,
+                _serverRoutingStatsManager);
       }
     }
 
@@ -290,7 +294,7 @@ public abstract class BaseBrokerStarter implements ServiceStartable {
       // TODO: decouple protocol and engine selection.
       multiStageBrokerRequestHandler =
           new MultiStageBrokerRequestHandler(_brokerConf, _routingManager, _accessControlFactory, queryQuotaManager,
-              tableCache, _brokerMetrics);
+              tableCache, queryResultCache, _brokerMetrics);
     }
 
     _brokerRequestHandler = new BrokerRequestHandlerDelegate(singleStageBrokerRequestHandler,
