@@ -134,6 +134,7 @@ public class BrokerQueryResultCache implements QueryResultCache<PinotQuery, Resu
 
   /** Put {@link PinotQuery} and its associated {@link ResultTable} into the cache asynchronously. */
   public CompletableFuture<Void> put(PinotQuery pinotQuery, ResultTable resultTable) {
+    System.out.println("\tAdding new entry into cache asynchronously.");
     CompletableFuture<Void> completableFuture = CompletableFuture.runAsync(new Runnable() {
       @Override
       public void run() {
@@ -149,7 +150,7 @@ public class BrokerQueryResultCache implements QueryResultCache<PinotQuery, Resu
     PinotQuery copiedPinotQuery = pinotQuery.deepCopy();
     copiedPinotQuery.queryOptions.remove("timeoutMs");
 
-    System.out.println("Query cache size: " + getCachedSize(pinotQuery, resultTable));
+    System.out.println("\tCache entry size: " + getCachedSize(pinotQuery, resultTable));
     _cache.put(copiedPinotQuery, new MemoryCacheItem(resultTable, 30, getCachedSize(pinotQuery, resultTable)));
 
     // Update the tableName->keys map as well. No need for locking and synchronization. It's ok for _tableKeys
@@ -168,6 +169,7 @@ public class BrokerQueryResultCache implements QueryResultCache<PinotQuery, Resu
       MemoryCacheItem item = _cache.getIfPresent(pinotQuery);
       if (item == null) {
         // Return null since query results are not cached.
+        System.out.println("\tCache entry not found.");
         return null;
       }
 
@@ -177,10 +179,12 @@ public class BrokerQueryResultCache implements QueryResultCache<PinotQuery, Resu
         // checking table level TTL here. Cache entries will automatically be invalidated if Broker TTL is
         // reached since Broker level TTL is specified during _cache construction.
         _cache.invalidate(pinotQuery);
+        System.out.println("\tCache entry expired.");
         return null;
       }
 
       // Return cached results.
+      System.out.println("\tCache entry found.");
       return result;
     } finally {
       // Put "timeoutMs" back into the incoming query.

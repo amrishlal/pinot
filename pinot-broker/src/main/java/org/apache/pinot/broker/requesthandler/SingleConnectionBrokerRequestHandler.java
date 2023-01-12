@@ -110,13 +110,13 @@ public class SingleConnectionBrokerRequestHandler extends BaseBrokerRequestHandl
 
     ResultTable cachedResultTable = _queryResultCache.get(originalBrokerRequest.pinotQuery);
     if (cachedResultTable != null) {
-      System.out.println("Found in cache");
+      //System.out.println("\tFound in cache");
       serverStats.setServerStats("QRC");
       BrokerResponseNative brokerResponseNative = new BrokerResponseNative();
       brokerResponseNative.setResultTable(cachedResultTable);
       return brokerResponseNative;
     }
-    System.out.println("Not found in cache");
+    //System.out.println("\tNot found in cache.");
 
     String rawTableName = TableNameBuilder.extractRawTableName(serverBrokerRequest.getQuerySource().getTableName());
     long scatterGatherStartTimeNs = System.nanoTime();
@@ -178,8 +178,13 @@ public class SingleConnectionBrokerRequestHandler extends BaseBrokerRequestHandl
 
     // Add query results to QRC
     BrokerRequest originalBrokerRequestCopy = originalBrokerRequest.deepCopy();
-    System.out.println("Adding to cache");
-    _queryResultCache.put(originalBrokerRequest.pinotQuery, brokerResponse.getResultTable());
+    if (brokerResponse.getNumServersQueried() == brokerResponse.getNumServersResponded()
+        && brokerResponse.getExceptionsSize() == 0) {
+      // Cache results only if all servers responded and there were no exceptions.
+      _queryResultCache.put(originalBrokerRequest.pinotQuery, brokerResponse.getResultTable());
+    } else {
+      System.out.println("\tQuery exception. Don't cache results.");
+    }
     return brokerResponse;
   }
 

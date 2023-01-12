@@ -664,6 +664,7 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
       _queriesById.put(requestId, new QueryServers(query, offlineRoutingTable, realtimeRoutingTable));
       LOGGER.debug("Keep track of running query: {}", requestId);
       try {
+        System.out.println("\nQuery: " + query);
         brokerResponse = processBrokerRequest(requestId, brokerRequest, serverBrokerRequest, offlineBrokerRequest,
             offlineRoutingTable, realtimeBrokerRequest, realtimeRoutingTable, remainingTimeMs, serverStats,
             requestContext);
@@ -672,6 +673,7 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
         LOGGER.debug("Remove track of running query: {}", requestId);
       }
     } else {
+      System.out.println("\nQuery: " + query);
       brokerResponse =
           processBrokerRequest(requestId, brokerRequest, serverBrokerRequest, offlineBrokerRequest, offlineRoutingTable,
               realtimeBrokerRequest, realtimeRoutingTable, remainingTimeMs, serverStats, requestContext);
@@ -700,6 +702,7 @@ public abstract class BaseBrokerRequestHandler implements BrokerRequestHandler {
     _queryLogger.log(
         new QueryLogger.QueryLogParams(requestId, query, requestContext, tableName, numUnavailableSegments, serverStats,
             brokerResponse, totalTimeMs, requesterIdentity));
+    System.out.println("\tTotal query time: " + totalTimeMs + " ms.");
     return brokerResponse;
   }
 
